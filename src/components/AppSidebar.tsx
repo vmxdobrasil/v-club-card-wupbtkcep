@@ -33,6 +33,8 @@ export function AppSidebar() {
       { title: 'Empresas Clientes', url: '#', icon: Store },
       { title: 'Relatórios Financeiros', url: '#', icon: PieChart },
       { title: 'Auditoria', url: '#', icon: ShieldAlert },
+      { title: 'Catálogos', url: '/master/catalogs', icon: Store },
+      { title: 'Produtos', url: '/master/products', icon: FileText },
     ],
     company: [
       { title: 'Painel da Empresa', url: '/company', icon: LayoutDashboard },
@@ -41,12 +43,14 @@ export function AppSidebar() {
       { title: 'Arquivos de Folha', url: '#', icon: FileText },
       { title: 'Rede de Parceiros', url: '#', icon: Store },
       { title: 'Configurações', url: '#', icon: Settings },
+      { title: 'Catálogos', url: '/company/catalogs', icon: Store },
     ],
     partner: [
       { title: 'Painel do Parceiro', url: '/partner', icon: LayoutDashboard },
       { title: 'Transações', url: '#', icon: FileText },
       { title: 'Extrato e Repasses', url: '#', icon: PieChart },
       { title: 'Minha Loja', url: '#', icon: Store },
+      { title: 'Produtos', url: '/partner/products', icon: Store },
     ],
   }
 

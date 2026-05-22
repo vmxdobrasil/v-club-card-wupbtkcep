@@ -7,9 +7,15 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import MasterDashboard from './pages/master/MasterDashboard'
+import MasterProductsPage from './pages/master/MasterProductsPage'
+import MasterCatalogsPage from './pages/master/MasterCatalogsPage'
+import MasterCatalogDetailsPage from './pages/master/MasterCatalogDetailsPage'
 import CompanyDashboard from './pages/company/CompanyDashboard'
+import CompanyCatalogsPage from './pages/company/CompanyCatalogsPage'
+import CompanyCatalogDetailsPage from './pages/company/CompanyCatalogDetailsPage'
 import HolderDashboard from './pages/holder/HolderDashboard'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
+import PartnerProductsPage from './pages/partner/PartnerProductsPage'
 
 const App = () => (
   <AuthProvider>
@@ -21,9 +27,15 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/master" element={<MasterDashboard />} />
+            <Route path="/master/products" element={<MasterProductsPage />} />
+            <Route path="/master/catalogs" element={<MasterCatalogsPage />} />
+            <Route path="/master/catalogs/:id" element={<MasterCatalogDetailsPage />} />
             <Route path="/company" element={<CompanyDashboard />} />
+            <Route path="/company/catalogs" element={<CompanyCatalogsPage />} />
+            <Route path="/company/catalogs/:id" element={<CompanyCatalogDetailsPage />} />
             <Route path="/holder" element={<HolderDashboard />} />
             <Route path="/partner" element={<PartnerDashboard />} />
+            <Route path="/partner/products" element={<PartnerProductsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
