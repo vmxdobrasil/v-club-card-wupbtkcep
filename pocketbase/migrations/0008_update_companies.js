@@ -2,18 +2,22 @@ migrate(
   (app) => {
     const col = app.findCollectionByNameOrId('companies')
 
-    col.fields.add(new TextField({ name: 'cnpj' }))
-    col.fields.add(new TextField({ name: 'address' }))
-    col.fields.add(new TextField({ name: 'zip_code' }))
-    col.fields.add(new TextField({ name: 'phone' }))
-    col.fields.add(new TextField({ name: 'whatsapp' }))
-    col.fields.add(new BoolField({ name: 'is_headquarters' }))
-    col.fields.add(
-      new RelationField({ name: 'parent_company_id', collectionId: col.id, maxSelect: 1 }),
-    )
-    col.fields.add(new TextField({ name: 'market_segment' }))
-    col.fields.add(new TextField({ name: 'co_manager' }))
-    col.fields.add(new TextField({ name: 'partner_affiliate' }))
+    if (!col.fields.getByName('cnpj')) col.fields.add(new TextField({ name: 'cnpj' }))
+    if (!col.fields.getByName('address')) col.fields.add(new TextField({ name: 'address' }))
+    if (!col.fields.getByName('zip_code')) col.fields.add(new TextField({ name: 'zip_code' }))
+    if (!col.fields.getByName('phone')) col.fields.add(new TextField({ name: 'phone' }))
+    if (!col.fields.getByName('whatsapp')) col.fields.add(new TextField({ name: 'whatsapp' }))
+    if (!col.fields.getByName('is_headquarters'))
+      col.fields.add(new BoolField({ name: 'is_headquarters' }))
+    if (!col.fields.getByName('parent_company_id'))
+      col.fields.add(
+        new RelationField({ name: 'parent_company_id', collectionId: col.id, maxSelect: 1 }),
+      )
+    if (!col.fields.getByName('market_segment'))
+      col.fields.add(new TextField({ name: 'market_segment' }))
+    if (!col.fields.getByName('co_manager')) col.fields.add(new TextField({ name: 'co_manager' }))
+    if (!col.fields.getByName('partner_affiliate'))
+      col.fields.add(new TextField({ name: 'partner_affiliate' }))
 
     app.save(col)
 
