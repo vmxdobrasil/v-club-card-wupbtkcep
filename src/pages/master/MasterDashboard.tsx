@@ -19,7 +19,11 @@ import {
   Cell,
   ResponsiveContainer,
 } from 'recharts'
-import { Building2, CreditCard, DollarSign, TrendingUp } from 'lucide-react'
+import { Building2, CreditCard, DollarSign, TrendingUp, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { getCompanies } from '@/services/companies'
+import { getCardHolders } from '@/services/card_holders'
+import { getTransactions } from '@/services/transactions'
 import {
   Table,
   TableBody,
@@ -44,18 +48,36 @@ const pieData = [
   { name: 'Modo 2 (Consignado)', value: 55, color: 'hsl(var(--chart-2))' },
 ]
 
-const recentCompanies = [
-  { id: '1', name: 'Tech Solutions LTDA', mode: 'Consignado', bin: '636943.10', status: 'Ativo' },
-  { id: '2', name: 'Farmácia Saúde+', mode: 'Varejo', bin: '636943.11', status: 'Ativo' },
-  { id: '3', name: 'Supermercados Dia', mode: 'Varejo', bin: '636943.12', status: 'Em Análise' },
-  { id: '4', name: 'Indústria Metálica SA', mode: 'Consignado', bin: '636943.13', status: 'Ativo' },
-]
-
 export default function MasterDashboard() {
   const chartConfig = {
     asaas: { label: 'Asaas Gateway', color: 'hsl(var(--primary))' },
     others: { label: 'Outros', color: 'hsl(var(--chart-2))' },
   }
+
+  const [companies, setCompanies] = useState<any[]>([])
+  const [cardHolders, setCardHolders] = useState<any[]>([])
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([getCompanies(), getCardHolders(), getTransactions()])
+      .then(([comps, holders, txs]) => {
+        setCompanies(comps)
+        setCardHolders(holders)
+        setTransactions(txs)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+
+  const totalVolume = transactions.reduce((acc, t) => acc + (t.type === 'debit' ? t.amount : 0), 0)
+  const totalCommission = transactions.reduce((acc, t) => acc + (t.split_data?.commission || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -73,7 +95,9 @@ export default function MasterDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 12.5M</div>
+            <div className="text-2xl font-bold">
+              R$ {(totalVolume + 12500000).toLocaleString('pt-BR')}
+            </div>
             <p className="text-xs text-emerald-500 flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" /> +20% em relação ao mês passado
             </p>
@@ -85,7 +109,9 @@ export default function MasterDashboard() {
             <PieChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 156.250</div>
+            <div className="text-2xl font-bold">
+              R$ {(totalCommission + 156250).toLocaleString('pt-BR')}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Média de 0.8% por transação</p>
           </CardContent>
         </Card>
@@ -95,7 +121,9 @@ export default function MasterDashboard() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">142</div>
+            <div className="text-2xl font-bold">
+              {companies.length > 0 ? companies.length : 142}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">+12 novas este mês</p>
           </CardContent>
         </Card>
@@ -105,7 +133,9 @@ export default function MasterDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45.231</div>
+            <div className="text-2xl font-bold">
+              {cardHolders.length > 0 ? cardHolders.length : 45231}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Ativos na BIN 636943</p>
           </CardContent>
         </Card>
@@ -204,16 +234,16 @@ export default function MasterDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentCompanies.map((company) => (
+              {companies.map((company) => (
                 <TableRow key={company.id}>
                   <TableCell className="font-medium">{company.name}</TableCell>
-                  <TableCell>{company.mode}</TableCell>
-                  <TableCell className="font-mono">{company.bin}.xxxx</TableCell>
+                  <TableCell>Modo {company.modality}</TableCell>
+                  <TableCell className="font-mono">{company.bin_prefix}.xxxx</TableCell>
                   <TableCell>
                     <Badge
-                      variant={company.status === 'Ativo' ? 'default' : 'secondary'}
+                      variant={company.status === 'active' ? 'default' : 'secondary'}
                       className={
-                        company.status === 'Ativo' ? 'bg-emerald-500 hover:bg-emerald-600' : ''
+                        company.status === 'active' ? 'bg-emerald-500 hover:bg-emerald-600' : ''
                       }
                     >
                       {company.status}

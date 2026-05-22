@@ -10,27 +10,43 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { QrCode, Store, TrendingUp, CheckCircle2, History } from 'lucide-react'
+import { QrCode, Store, TrendingUp, CheckCircle2, History, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/use-auth'
+import { useEffect, useState } from 'react'
+import { getTransactions } from '@/services/transactions'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export default function PartnerDashboard() {
-  const transactions = [
-    { id: 'T-982', customer: 'João S.', time: 'Há 5 min', amount: 'R$ 45,90', status: 'Aprovado' },
-    {
-      id: 'T-981',
-      customer: 'Maria C.',
-      time: 'Há 22 min',
-      amount: 'R$ 120,00',
-      status: 'Aprovado',
-    },
-    {
-      id: 'T-980',
-      customer: 'Carlos R.',
-      time: 'Há 1 hora',
-      amount: 'R$ 15,50',
-      status: 'Aprovado',
-    },
-  ]
+  const { user } = useAuth()
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = async () => {
+    try {
+      const txs = await getTransactions()
+      setTransactions(txs.filter((t) => t.partner_id === user?.id))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [user])
+
+  useRealtime('transactions', () => {
+    loadData()
+  })
+
+  if (loading)
+    return (
+      <div className="flex justify-center p-10">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+
+  const totalToday = transactions.reduce((acc, t) => acc + (t.type === 'debit' ? t.amount : 0), 0)
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -39,7 +55,7 @@ export default function PartnerDashboard() {
           <Store className="w-8 h-8 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Farmácia Saúde+</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{user?.name}</h1>
           <p className="text-muted-foreground">Parceiro V Club - Recebedor</p>
         </div>
       </div>
@@ -98,9 +114,9 @@ export default function PartnerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold">R$ 845,00</div>
+              <div className="text-4xl font-bold">R$ {totalToday.toFixed(2).replace('.', ',')}</div>
               <p className="text-sm text-emerald-500 flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 mr-1" /> +12% vs ontem
+                <TrendingUp className="w-4 h-4 mr-1" /> atualizado em tempo real
               </p>
             </CardContent>
           </Card>
@@ -124,14 +140,16 @@ export default function PartnerDashboard() {
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                       <div>
-                        <p className="font-medium">{tx.customer}</p>
+                        <p className="font-medium">
+                          {tx.expand?.holder_id?.expand?.user_id?.name || 'Cliente'}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {tx.time} • {tx.id}
+                          {new Date(tx.created).toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{tx.amount}</p>
+                      <p className="font-bold">R$ {tx.amount.toFixed(2).replace('.', ',')}</p>
                       <Badge
                         variant="outline"
                         className="text-[10px] text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20"
@@ -141,6 +159,9 @@ export default function PartnerDashboard() {
                     </div>
                   </div>
                 ))}
+                {transactions.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center">Nenhuma venda hoje.</p>
+                )}
               </div>
               <Button variant="ghost" className="w-full mt-4 text-primary">
                 Ver Extrato Completo

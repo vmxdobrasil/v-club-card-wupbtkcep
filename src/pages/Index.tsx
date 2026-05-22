@@ -13,24 +13,46 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import useAuthStore from '@/stores/use-auth-store'
+import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/hooks/use-toast'
+import { useEffect } from 'react'
 
 export default function Index() {
-  const { login } = useAuthStore()
+  const { signIn, user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [isActivating, setIsActivating] = useState(false)
   const [activationStep, setActivationStep] = useState(1)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
-  const handleDemoLogin = (role: 'master' | 'company' | 'partner' | 'holder') => {
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate(
+        `/${user.role === 'holder' ? 'holder' : user.role === 'master' ? 'master' : user.role === 'company' ? 'company' : 'partner'}`,
+      )
+    }
+  }, [isAuthenticated, user, navigate])
+
+  const handleDemoLogin = async (role: 'master' | 'company' | 'partner' | 'holder') => {
     const profiles = {
-      master: { name: 'Admin VMX', company: 'VMX do Brasil', path: '/master' },
-      company: { name: 'RH Manager', company: 'Tech Solutions LTDA', path: '/company' },
-      partner: { name: 'Gerente Loja', company: 'Farmácia Saúde', path: '/partner' },
-      holder: { name: 'João Silva', company: 'Tech Solutions LTDA', path: '/holder' },
+      master: { email: 'valterpmendonca@gmail.com', path: '/master' },
+      company: { email: 'rh@techsolutions.com', path: '/company' },
+      partner: { email: 'loja@farmacia.com', path: '/partner' },
+      holder: { email: 'joao@techsolutions.com', path: '/holder' },
     }
 
-    login(role, profiles[role].name, profiles[role].company)
-    navigate(profiles[role].path)
+    const { error } = await signIn(profiles[role].email, 'Skip@Pass')
+    if (error) {
+      toast({ title: 'Erro', description: 'Credenciais inválidas.', variant: 'destructive' })
+    }
+  }
+
+  const handleLogin = async () => {
+    const { error } = await signIn(email, password)
+    if (error) {
+      toast({ title: 'Erro', description: 'Credenciais inválidas.', variant: 'destructive' })
+    }
   }
 
   return (
@@ -78,10 +100,13 @@ export default function Index() {
                   </TabsList>
                   <TabsContent value="login" className="space-y-4 mt-6">
                     <div className="space-y-2">
-                      <Label htmlFor="doc">CPF ou E-mail</Label>
+                      <Label htmlFor="email">E-mail</Label>
                       <Input
-                        id="doc"
-                        placeholder="000.000.000-00"
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
                         className="bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500"
                       />
                     </div>
@@ -95,12 +120,14 @@ export default function Index() {
                       <Input
                         id="password"
                         type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         className="bg-slate-900/50 border-slate-700 text-white"
                       />
                     </div>
                     <Button
                       className="w-full bg-[#C5A059] hover:bg-[#C5A059]/90 text-[#0A192F] font-bold"
-                      onClick={() => handleDemoLogin('holder')}
+                      onClick={handleLogin}
                     >
                       Entrar
                     </Button>

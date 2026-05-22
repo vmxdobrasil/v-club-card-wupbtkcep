@@ -1,0 +1,301 @@
+{
+  "generatedAt": "2026-05-22T17:51:42.003Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "id = @request.auth.id",
+        "view": "id = @request.auth.id",
+        "create": "",
+        "update": "id = @request.auth.id",
+        "delete": "id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["master", "company", "partner", "holder"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "companies",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'master'",
+        "update": "@request.auth.role = 'master' || @request.auth.id = owner_id",
+        "delete": "@request.auth.role = 'master'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bin_prefix",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "commission_rate",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "modality",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["1", "2", "both"]
+        },
+        {
+          "name": "gateway_provider",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Asaas", "Alternative", "None/Manual"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["active", "inactive"]
+        },
+        {
+          "name": "owner_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "card_holders",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'company'"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "company_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "card_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cvv",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_limit",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "used_limit",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "max_consigned_margin",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["active", "blocked", "canceled"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_card_holders_number ON card_holders (card_number)"]
+    },
+    {
+      "name": "transactions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.role = 'master'",
+        "delete": "@request.auth.role = 'master'"
+      },
+      "fields": [
+        {
+          "name": "holder_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "card_holders"
+        },
+        {
+          "name": "company_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "partner_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["debit", "credit"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pending", "approved", "rejected"]
+        },
+        {
+          "name": "split_data",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gateway_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

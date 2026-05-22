@@ -20,11 +20,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import useAuthStore from '@/stores/use-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AppSidebar() {
   const location = useLocation()
-  const { user } = useAuthStore()
+  const { user } = useAuth()
 
   const navItems = {
     master: [
@@ -51,9 +51,7 @@ export function AppSidebar() {
   }
 
   const items =
-    user.role !== 'guest' && user.role !== 'holder'
-      ? navItems[user.role as keyof typeof navItems]
-      : []
+    user && user.role !== 'holder' ? navItems[user.role as keyof typeof navItems] || [] : []
 
   return (
     <Sidebar variant="inset">

@@ -2,28 +2,36 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import useAuthStore from '@/stores/use-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { AppSidebar } from './AppSidebar'
 import { TopHeader } from './TopHeader'
 import { MobileBottomNav } from './MobileBottomNav'
 import { cn } from '@/lib/utils'
+import { Loader2 } from 'lucide-react'
 
 export default function Layout() {
-  const { user } = useAuthStore()
+  const { user, isAuthenticated, loading } = useAuth()
   const isMobile = useIsMobile()
   const location = useLocation()
   const navigate = useNavigate()
 
-  const isHolder = user.role === 'holder'
-  const isGuest = user.role === 'guest'
+  const isHolder = user?.role === 'holder'
 
   useEffect(() => {
-    if (isGuest && location.pathname !== '/') {
+    if (!loading && !isAuthenticated && location.pathname !== '/') {
       navigate('/')
     }
-  }, [isGuest, location.pathname, navigate])
+  }, [isAuthenticated, loading, location.pathname, navigate])
 
-  if (isGuest) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-background">
         <Outlet />

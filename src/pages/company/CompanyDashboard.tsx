@@ -11,36 +11,36 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Upload, Download, Users, Calculator, Briefcase, CreditCard } from 'lucide-react'
+import {
+  Upload,
+  Download,
+  Users,
+  Calculator,
+  Briefcase,
+  CreditCard,
+  Loader2,
+  Store,
+} from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
+import { useEffect, useState } from 'react'
+import { getCardHolders } from '@/services/card_holders'
 
 export default function CompanyDashboard() {
-  const employees = [
-    {
-      id: '1',
-      name: 'Ana Silva',
-      cpf: '***.123.***-00',
-      salary: 'R$ 4.500',
-      margin: 'R$ 1.575',
-      used: 'R$ 800',
-    },
-    {
-      id: '2',
-      name: 'Carlos Roberto',
-      cpf: '***.456.***-00',
-      salary: 'R$ 3.200',
-      margin: 'R$ 1.120',
-      used: 'R$ 1.100',
-    },
-    {
-      id: '3',
-      name: 'Fernanda Lima',
-      cpf: '***.789.***-00',
-      salary: 'R$ 7.800',
-      margin: 'R$ 2.730',
-      used: 'R$ 0',
-    },
-  ]
+  const [employees, setEmployees] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getCardHolders()
+      .then((data) => setEmployees(data))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
 
   return (
     <div className="space-y-6">
@@ -87,7 +87,9 @@ export default function CompanyDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">142</div>
+            <div className="text-3xl font-bold">
+              {employees.length > 0 ? employees.length : 142}
+            </div>
             <p className="text-sm text-muted-foreground mt-2">De 150 colaboradores elegíveis</p>
           </CardContent>
         </Card>
@@ -134,19 +136,23 @@ export default function CompanyDashboard() {
                 </TableHeader>
                 <TableBody>
                   {employees.map((emp) => {
-                    const usage =
-                      (parseFloat(emp.used.replace('R$ ', '').replace('.', '')) /
-                        parseFloat(emp.margin.replace('R$ ', '').replace('.', ''))) *
-                      100
+                    const margin = emp.total_limit
+                    const used = emp.used_limit
+                    const usage = margin > 0 ? (used / margin) * 100 : 0
+
                     return (
                       <TableRow key={emp.id}>
-                        <TableCell className="font-medium">{emp.name}</TableCell>
-                        <TableCell>{emp.cpf}</TableCell>
-                        <TableCell>{emp.salary}</TableCell>
-                        <TableCell className="text-emerald-600 font-medium">{emp.margin}</TableCell>
+                        <TableCell className="font-medium">
+                          {emp.expand?.user_id?.name || 'User'}
+                        </TableCell>
+                        <TableCell>***.***.***-**</TableCell>
+                        <TableCell>-</TableCell>
+                        <TableCell className="text-emerald-600 font-medium">
+                          R$ {margin.toFixed(2)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="w-16 text-sm">{emp.used}</span>
+                            <span className="w-16 text-sm">R$ {used.toFixed(2)}</span>
                             <Progress
                               value={usage}
                               className={

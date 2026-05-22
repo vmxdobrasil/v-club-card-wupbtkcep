@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CreditCard } from '@/components/CreditCard'
-import { QrCode, ShoppingCart, Coffee, Activity, ChevronRight } from 'lucide-react'
+import { QrCode, ShoppingCart, Coffee, Activity, ChevronRight, Loader2 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
 import {
@@ -12,41 +12,64 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { QRCodeDisplay } from '@/components/QRCodeDisplay'
-import useAuthStore from '@/stores/use-auth-store'
-
-const transactions = [
-  {
-    id: 1,
-    desc: 'Farmácia Pague Menos',
-    amount: 45.9,
-    type: 'health',
-    icon: Activity,
-    date: 'Hoje, 14:30',
-  },
-  {
-    id: 2,
-    desc: 'Supermercado Extra',
-    amount: 230.0,
-    type: 'food',
-    icon: ShoppingCart,
-    date: 'Ontem, 09:15',
-  },
-  {
-    id: 3,
-    desc: 'Cafeteria Central',
-    amount: 12.5,
-    type: 'food',
-    icon: Coffee,
-    date: '12 Maio, 16:40',
-  },
-]
+import { useAuth } from '@/hooks/use-auth'
+import { useEffect, useState } from 'react'
+import { getMyCardHolder } from '@/services/card_holders'
+import { getMyTransactions } from '@/services/transactions'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export default function HolderDashboard() {
-  const { user } = useAuthStore()
-  const limitTotal = 2500
-  const limitUsed = 850
+  const { user } = useAuth()
+  const [holder, setHolder] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = async () => {
+    if (!user) return
+    try {
+      const h = await getMyCardHolder(user.id)
+      setHolder(h)
+      if (h) {
+        const txs = await getMyTransactions(h.id)
+        setTransactions(txs)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [user])
+
+  useRealtime('card_holders', (e) => {
+    if (e.record.id === holder?.id) {
+      setHolder(e.record)
+    }
+  })
+
+  useRealtime('transactions', (e) => {
+    if (e.record.holder_id === holder?.id) {
+      loadData()
+    }
+  })
+
+  if (loading)
+    return (
+      <div className="flex justify-center p-10">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+
+  if (!holder)
+    return <div className="p-10 text-center text-muted-foreground">Nenhum cartão encontrado.</div>
+
+  const limitTotal = holder.total_limit || 0
+  const limitUsed = holder.used_limit || 0
   const limitAvailable = limitTotal - limitUsed
-  const percentUsed = (limitUsed / limitTotal) * 100
+  const percentUsed = limitTotal > 0 ? (limitUsed / limitTotal) * 100 : 0
 
   return (
     <div className="space-y-6 animate-fade-in-up pb-10">
@@ -63,19 +86,33 @@ export default function HolderDashboard() {
         <CarouselContent>
           <CarouselItem>
             <CreditCard
-              name={user?.name.toUpperCase() || 'PORTADOR'}
-              number="6369 4300 1234 5678"
-              expiry="12/29"
-              cvv="456"
+              name={user?.name?.toUpperCase() || 'PORTADOR'}
+              number={holder.card_number.replace(/(.{4})/g, '$1 ').trim()}
+              expiry={
+                holder.expiry
+                  ? new Date(holder.expiry).toLocaleDateString('pt-BR', {
+                      month: '2-digit',
+                      year: '2-digit',
+                    })
+                  : '12/29'
+              }
+              cvv={holder.cvv}
               type="virtual"
             />
           </CarouselItem>
           <CarouselItem>
             <CreditCard
-              name={user?.name.toUpperCase() || 'PORTADOR'}
-              number="6369 4300 8765 4321"
-              expiry="12/29"
-              cvv="123"
+              name={user?.name?.toUpperCase() || 'PORTADOR'}
+              number={holder.card_number.replace(/(.{4})/g, '$1 ').trim()}
+              expiry={
+                holder.expiry
+                  ? new Date(holder.expiry).toLocaleDateString('pt-BR', {
+                      month: '2-digit',
+                      year: '2-digit',
+                    })
+                  : '12/29'
+              }
+              cvv={holder.cvv}
               type="physical"
             />
           </CarouselItem>
@@ -142,21 +179,32 @@ export default function HolderDashboard() {
             >
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center">
-                  <tx.icon className="h-6 w-6 text-primary" />
+                  <ShoppingCart className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-foreground">{tx.desc}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{tx.date}</p>
+                  <p className="font-semibold text-sm text-foreground">
+                    {tx.expand?.partner_id?.name || 'Compra'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {new Date(tx.created).toLocaleString()}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm">
-                  R$ {tx.amount.toFixed(2).replace('.', ',')}
+                <span
+                  className={`font-bold text-sm ${tx.type === 'credit' ? 'text-emerald-500' : ''}`}
+                >
+                  {tx.type === 'credit' ? '+' : '-'} R$ {tx.amount.toFixed(2).replace('.', ',')}
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50" />
               </div>
             </div>
           ))}
+          {transactions.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhuma transação recente.
+            </p>
+          )}
         </div>
       </div>
     </div>
