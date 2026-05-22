@@ -19,13 +19,16 @@ import {
   Cell,
   ResponsiveContainer,
 } from 'recharts'
-import { Building2, CreditCard, DollarSign, TrendingUp, Loader2 } from 'lucide-react'
+import { Building2, CreditCard, DollarSign, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { getCompanies, type Company } from '@/services/companies'
 import { getCardHolders } from '@/services/card_holders'
 import { getTransactions } from '@/services/transactions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { CompanyManagement } from '@/components/master/CompanyManagement'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const volumeData = [
   { month: 'Jan', asaas: 1200000, others: 400000 },
@@ -47,17 +50,25 @@ export default function MasterDashboard() {
     others: { label: 'Outros', color: 'hsl(var(--chart-2))' },
   }
 
+  const { user, loading: authLoading } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [cardHolders, setCardHolders] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const loadData = useCallback(() => {
+    setError(null)
+    setLoading(true)
     Promise.all([getCompanies(), getCardHolders(), getTransactions()])
       .then(([comps, holders, txs]) => {
         setCompanies(comps)
         setCardHolders(holders)
         setTransactions(txs)
+      })
+      .catch((err) => {
+        console.error(err)
+        setError('Não foi possível carregar os dados. Verifique sua conexão ou permissões.')
       })
       .finally(() => setLoading(false))
   }, [])
@@ -70,12 +81,41 @@ export default function MasterDashboard() {
     getCompanies().then(setCompanies).catch(console.error)
   })
 
-  if (loading)
+  if (authLoading || loading)
     return (
-      <div className="flex items-center justify-center p-10">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex items-center justify-center p-10 min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
+
+  if (user?.role !== 'master') {
+    return (
+      <div className="flex items-center justify-center p-10 min-h-[50vh]">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Acesso Negado</AlertTitle>
+          <AlertDescription>
+            Você não tem permissão para acessar o Dashboard Master.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 min-h-[50vh] space-y-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro ao carregar dados</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button onClick={loadData} variant="outline">
+          Tentar Novamente
+        </Button>
+      </div>
+    )
+  }
 
   const totalVolume = transactions.reduce((acc, t) => acc + (t.type === 'debit' ? t.amount : 0), 0)
   const totalCommission = transactions.reduce((acc, t) => acc + (t.split_data?.commission || 0), 0)
