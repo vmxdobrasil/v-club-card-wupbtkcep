@@ -10,11 +10,27 @@ export type Company = {
   gateway_provider: 'Asaas' | 'Alternative' | 'None/Manual'
   status: 'active' | 'inactive'
   owner_id?: string
+
+  cnpj: string
+  address?: string
+  zip_code?: string
+  phone?: string
+  whatsapp?: string
+  is_headquarters: boolean
+  parent_company_id?: string
+  market_segment?: string
+  co_manager?: string
+  partner_affiliate?: string
+
   expand?: {
     owner_id?: {
       id: string
       name: string
       email: string
+    }
+    parent_company_id?: {
+      id: string
+      name: string
     }
   }
   created: string
@@ -22,7 +38,9 @@ export type Company = {
 }
 
 export const getCompanies = () =>
-  pb.collection('companies').getFullList<Company>({ sort: '-created', expand: 'owner_id' })
+  pb
+    .collection('companies')
+    .getFullList<Company>({ sort: '-created', expand: 'owner_id,parent_company_id' })
 
 export const createCompany = (data: Partial<Company>) =>
   pb.collection('companies').create<Company>(data)

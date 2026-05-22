@@ -95,10 +95,10 @@ export function CompanyManagement({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>
+                      <TableHead>CNPJ / Contato</TableHead>
+                      <TableHead>Hierarquia</TableHead>
                       <TableHead>Prefixo BIN</TableHead>
-                      <TableHead>Taxa de Comissão (%)</TableHead>
                       <TableHead>Modalidade</TableHead>
-                      <TableHead>Gateway</TableHead>
                       <TableHead>Status</TableHead>
                       {isMaster && <TableHead className="text-right">Ações</TableHead>}
                     </TableRow>
@@ -106,11 +106,45 @@ export function CompanyManagement({
                   <TableBody>
                     {companies.map((company) => (
                       <TableRow key={company.id}>
-                        <TableCell className="font-medium">{company.name}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">{company.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {company.market_segment || 'Sem segmento'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-sm">{company.cnpj}</div>
+                          {(company.phone || company.whatsapp) && (
+                            <div className="text-xs text-muted-foreground">
+                              {company.whatsapp || company.phone}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={
+                              company.is_headquarters ? 'border-primary/50 text-primary' : ''
+                            }
+                          >
+                            {company.is_headquarters ? 'Matriz' : 'Filial'}
+                          </Badge>
+                          {!company.is_headquarters && company.expand?.parent_company_id && (
+                            <div
+                              className="text-xs text-muted-foreground mt-1 truncate max-w-[150px]"
+                              title={company.expand.parent_company_id.name}
+                            >
+                              De: {company.expand.parent_company_id.name}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono">{company.bin_prefix}</TableCell>
-                        <TableCell>{company.commission_rate}%</TableCell>
-                        <TableCell>Modo {company.modality}</TableCell>
-                        <TableCell>{company.gateway_provider}</TableCell>
+                        <TableCell>
+                          <div>Modo {company.modality}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {company.commission_rate}%
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant={company.status === 'active' ? 'default' : 'secondary'}
@@ -191,6 +225,7 @@ export function CompanyManagement({
         open={formOpen}
         onOpenChange={setFormOpen}
         company={editingCompany}
+        companies={companies}
         onSuccess={() => setFormOpen(false)}
       />
     </div>
