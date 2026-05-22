@@ -16,11 +16,12 @@ export type Company = {
   zip_code?: string
   phone?: string
   whatsapp?: string
-  is_headquarters: boolean
-  parent_company_id?: string
+  is_matrix: boolean
+  matrix_id?: string
   market_segment?: string
-  co_manager?: string
-  partner_affiliate?: string
+  co_manager_id?: string
+  partner_id?: string
+  change_log?: any
 
   expand?: {
     owner_id?: {
@@ -28,7 +29,7 @@ export type Company = {
       name: string
       email: string
     }
-    parent_company_id?: {
+    matrix_id?: {
       id: string
       name: string
     }
@@ -40,7 +41,7 @@ export type Company = {
 export const getCompanies = () =>
   pb
     .collection('companies')
-    .getFullList<Company>({ sort: '-created', expand: 'owner_id,parent_company_id' })
+    .getFullList<Company>({ sort: '-created', expand: 'owner_id,matrix_id' })
 
 export const createCompany = (data: Partial<Company>) =>
   pb.collection('companies').create<Company>(data)

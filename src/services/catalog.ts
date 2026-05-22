@@ -30,3 +30,33 @@ export const getCatalogItems = (catalogId?: string) => {
 export const addProductToCatalog = (catalogId: string, productId: string) =>
   pb.collection('catalog_items').create({ catalog_id: catalogId, product_id: productId })
 export const removeProductFromCatalog = (id: string) => pb.collection('catalog_items').delete(id)
+
+export const getCompanyProducts = (companyId: string) =>
+  pb
+    .collection('company_products')
+    .getFullList({ filter: `company_id = "${companyId}"`, expand: 'product_id' })
+
+export const saveCompanyProduct = async (
+  companyId: string,
+  productId: string,
+  customPrice?: number,
+) => {
+  const existing = await pb
+    .collection('company_products')
+    .getFullList({ filter: `company_id = "${companyId}" && product_id = "${productId}"` })
+  if (existing.length > 0) {
+    return pb.collection('company_products').update(existing[0].id, { custom_price: customPrice })
+  }
+  return pb
+    .collection('company_products')
+    .create({ company_id: companyId, product_id: productId, custom_price: customPrice })
+}
+
+export const removeCompanyProduct = async (companyId: string, productId: string) => {
+  const existing = await pb
+    .collection('company_products')
+    .getFullList({ filter: `company_id = "${companyId}" && product_id = "${productId}"` })
+  for (const item of existing) {
+    await pb.collection('company_products').delete(item.id)
+  }
+}

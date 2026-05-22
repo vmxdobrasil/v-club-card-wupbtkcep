@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -26,6 +26,8 @@ import { createCompany, updateCompany, type Company } from '@/services/companies
 import { toast } from 'sonner'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { Loader2 } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 const schema = z
   .object({
@@ -40,15 +42,15 @@ const schema = z
     zip_code: z.string().optional(),
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
-    is_headquarters: z.boolean().default(true),
-    parent_company_id: z.string().optional(),
+    is_matrix: z.boolean().default(true),
+    matrix_id: z.string().optional(),
     market_segment: z.string().optional(),
-    co_manager: z.string().optional(),
-    partner_affiliate: z.string().optional(),
+    co_manager_id: z.string().optional(),
+    partner_id: z.string().optional(),
   })
-  .refine((data) => data.is_headquarters || !!data.parent_company_id, {
+  .refine((data) => data.is_matrix || !!data.matrix_id, {
     message: 'Selecione a matriz para esta filial',
-    path: ['parent_company_id'],
+    path: ['matrix_id'],
   })
 
 type FormValues = z.infer<typeof schema>
@@ -93,6 +95,18 @@ const applyPhoneMask = (val: string) => {
 }
 
 export function CompanyForm({ open, onOpenChange, company, companies, onSuccess }: Props) {
+  const { user } = useAuth()
+  const [partners, setPartners] = useState<any[]>([])
+
+  useEffect(() => {
+    if (open) {
+      pb.collection('users')
+        .getFullList({ filter: "role='partner'" })
+        .then(setPartners)
+        .catch(console.error)
+    }
+  }, [open])
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -107,11 +121,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       zip_code: '',
       phone: '',
       whatsapp: '',
-      is_headquarters: true,
-      parent_company_id: '',
+      is_matrix: true,
+      matrix_id: '',
       market_segment: '',
-      co_manager: '',
-      partner_affiliate: '',
+      co_manager_id: '',
+      partner_id: '',
     },
   })
 
@@ -131,11 +145,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               zip_code: company.zip_code || '',
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
-              is_headquarters: company.is_headquarters ?? true,
-              parent_company_id: company.parent_company_id || '',
+              is_matrix: company.is_matrix ?? true,
+              matrix_id: company.matrix_id || '',
               market_segment: company.market_segment || '',
-              co_manager: company.co_manager || '',
-              partner_affiliate: company.partner_affiliate || '',
+              co_manager_id: company.co_manager_id || '',
+              partner_id: company.partner_id || '',
             }
           : {
               name: '',
@@ -149,23 +163,55 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               zip_code: '',
               phone: '',
               whatsapp: '',
-              is_headquarters: true,
-              parent_company_id: '',
+              is_matrix: true,
+              matrix_id: '',
               market_segment: '',
-              co_manager: '',
-              partner_affiliate: '',
+              co_manager_id: '',
+              partner_id: '',
             },
       )
     }
   }, [open, company, form])
 
-  const parentOptions = companies.filter((c) => c.id !== company?.id && c.is_headquarters)
-  const isHeadquarters = form.watch('is_headquarters')
+  const parentOptions = companies.filter((c) => c.id !== company?.id && c.is_matrix)
+  const isMatrix = form.watch('is_matrix')
+
+  const fetchAddress = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '')
+    if (cleanCep.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+        const data = await res.json()
+        if (!data.erro) {
+          form.setValue(
+            'address',
+            `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`,
+          )
+        }
+      } catch (err) {
+        console.error('Error fetching CEP', err)
+      }
+    }
+  }
 
   const onSubmit = async (data: FormValues) => {
     try {
-      if (company) await updateCompany(company.id, data)
-      else await createCompany(data)
+      let change_log = company?.change_log || []
+      if (company && data.bin_prefix !== company.bin_prefix) {
+        const entry = {
+          date: new Date().toISOString(),
+          old_bin: company.bin_prefix,
+          new_bin: data.bin_prefix,
+          user: user?.id,
+        }
+        change_log = [...(Array.isArray(change_log) ? change_log : []), entry]
+      }
+
+      const payload = { ...data, change_log }
+
+      if (company) await updateCompany(company.id, payload)
+      else await createCompany(payload)
+
       toast.success(company ? 'Empresa atualizada com sucesso' : 'Empresa criada com sucesso')
       onSuccess()
     } catch (error) {
@@ -327,7 +373,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="is_headquarters"
+                      name="is_matrix"
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 col-span-2 sm:col-span-1">
                           <div className="space-y-0.5">
@@ -341,7 +387,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                               checked={field.value}
                               onCheckedChange={(val) => {
                                 field.onChange(val)
-                                if (val) form.setValue('parent_company_id', '')
+                                if (val) form.setValue('matrix_id', '')
                               }}
                             />
                           </FormControl>
@@ -349,10 +395,10 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       )}
                     />
 
-                    {!isHeadquarters && (
+                    {!isMatrix && (
                       <FormField
                         control={form.control}
-                        name="parent_company_id"
+                        name="matrix_id"
                         render={({ field }) => (
                           <FormItem className="col-span-2 sm:col-span-1">
                             <FormLabel>Selecione a Matriz</FormLabel>
@@ -385,7 +431,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       control={form.control}
                       name="market_segment"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-2">
                           <FormLabel>Segmento de Mercado</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Ex: Varejo, Alimentação" />
@@ -397,13 +443,29 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
 
                     <FormField
                       control={form.control}
-                      name="co_manager"
+                      name="co_manager_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Co-gestora (Cobranded)</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Opcional" />
-                          </FormControl>
+                          <FormLabel>Co-gestor (Cobranded)</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {partners.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name || p.email}
+                                </SelectItem>
+                              ))}
+                              {partners.length === 0 && (
+                                <SelectItem value="none" disabled>
+                                  Nenhum parceiro
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -411,13 +473,29 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
 
                     <FormField
                       control={form.control}
-                      name="partner_affiliate"
+                      name="partner_id"
                       render={({ field }) => (
-                        <FormItem className="col-span-2">
+                        <FormItem>
                           <FormLabel>Parceira / Afiliada</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Opcional" />
-                          </FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {partners.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name || p.email}
+                                </SelectItem>
+                              ))}
+                              {partners.length === 0 && (
+                                <SelectItem value="none" disabled>
+                                  Nenhum parceiro
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -438,7 +516,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                           <FormControl>
                             <Input
                               {...field}
-                              onChange={(e) => field.onChange(applyCepMask(e.target.value))}
+                              onChange={(e) => {
+                                const val = applyCepMask(e.target.value)
+                                field.onChange(val)
+                                fetchAddress(val)
+                              }}
                               placeholder="00000-000"
                             />
                           </FormControl>

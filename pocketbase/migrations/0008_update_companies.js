@@ -2,26 +2,35 @@ migrate(
   (app) => {
     const col = app.findCollectionByNameOrId('companies')
 
-    if (!col.fields.getByName('cnpj')) col.fields.add(new TextField({ name: 'cnpj' }))
-    if (!col.fields.getByName('address')) col.fields.add(new TextField({ name: 'address' }))
-    if (!col.fields.getByName('zip_code')) col.fields.add(new TextField({ name: 'zip_code' }))
-    if (!col.fields.getByName('phone')) col.fields.add(new TextField({ name: 'phone' }))
-    if (!col.fields.getByName('whatsapp')) col.fields.add(new TextField({ name: 'whatsapp' }))
-    if (!col.fields.getByName('is_headquarters'))
-      col.fields.add(new BoolField({ name: 'is_headquarters' }))
-    if (!col.fields.getByName('parent_company_id'))
-      col.fields.add(
-        new RelationField({ name: 'parent_company_id', collectionId: col.id, maxSelect: 1 }),
-      )
-    if (!col.fields.getByName('market_segment'))
-      col.fields.add(new TextField({ name: 'market_segment' }))
-    if (!col.fields.getByName('co_manager')) col.fields.add(new TextField({ name: 'co_manager' }))
-    if (!col.fields.getByName('partner_affiliate'))
-      col.fields.add(new TextField({ name: 'partner_affiliate' }))
+    const addField = (field) => {
+      if (!col.fields.getByName(field.name)) col.fields.add(field)
+    }
+
+    addField(new TextField({ name: 'cnpj' }))
+    addField(new TextField({ name: 'address' }))
+    addField(new TextField({ name: 'zip_code' }))
+    addField(new TextField({ name: 'phone' }))
+    addField(new TextField({ name: 'whatsapp' }))
+    addField(new BoolField({ name: 'is_matrix' }))
+    addField(new RelationField({ name: 'matrix_id', collectionId: col.id, maxSelect: 1 }))
+    addField(new TextField({ name: 'market_segment' }))
+    addField(
+      new RelationField({ name: 'co_manager_id', collectionId: '_pb_users_auth_', maxSelect: 1 }),
+    )
+    addField(
+      new RelationField({ name: 'partner_id', collectionId: '_pb_users_auth_', maxSelect: 1 }),
+    )
+    addField(new JSONField({ name: 'change_log' }))
+
+    // Remove old fields if they exist
+    const oldFields = ['is_headquarters', 'parent_company_id', 'co_manager', 'partner_affiliate']
+    for (const f of oldFields) {
+      if (col.fields.getByName(f)) col.fields.removeByName(f)
+    }
 
     app.save(col)
 
-    // Give existing records a fake unique CNPJ and set them as Headquarters to pass validation and constraints safely
+    // Give existing records a fake unique CNPJ and set them as Matrix to pass validation safely
     app
       .db()
       .newQuery(
@@ -30,9 +39,7 @@ migrate(
       .execute()
     app
       .db()
-      .newQuery(
-        'UPDATE companies SET is_headquarters = 1 WHERE is_headquarters IS NULL OR is_headquarters = 0',
-      )
+      .newQuery('UPDATE companies SET is_matrix = 1 WHERE is_matrix IS NULL OR is_matrix = 0')
       .execute()
 
     const col2 = app.findCollectionByNameOrId('companies')
@@ -43,22 +50,30 @@ migrate(
     app.save(col2)
 
     col2.addIndex('idx_companies_cnpj', true, 'cnpj', '')
+    col2.addIndex('idx_companies_bin', true, 'bin_prefix', '')
     app.save(col2)
   },
   (app) => {
     const col = app.findCollectionByNameOrId('companies')
     col.removeIndex('idx_companies_cnpj')
+    col.removeIndex('idx_companies_bin')
 
-    col.fields.removeByName('cnpj')
-    col.fields.removeByName('address')
-    col.fields.removeByName('zip_code')
-    col.fields.removeByName('phone')
-    col.fields.removeByName('whatsapp')
-    col.fields.removeByName('is_headquarters')
-    col.fields.removeByName('parent_company_id')
-    col.fields.removeByName('market_segment')
-    col.fields.removeByName('co_manager')
-    col.fields.removeByName('partner_affiliate')
+    const newFields = [
+      'cnpj',
+      'address',
+      'zip_code',
+      'phone',
+      'whatsapp',
+      'is_matrix',
+      'matrix_id',
+      'market_segment',
+      'co_manager_id',
+      'partner_id',
+      'change_log',
+    ]
+    for (const f of newFields) {
+      col.fields.removeByName(f)
+    }
 
     app.save(col)
   },

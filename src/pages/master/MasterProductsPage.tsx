@@ -13,7 +13,6 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -23,58 +22,45 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
+import { Badge } from '@/components/ui/badge'
 
 export default function MasterProductsPage() {
   const [products, setProducts] = useState<any[]>([])
-  const [partners, setPartners] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    original_price: '',
-    promo_price: '',
-    partner_id: '',
-    active: true,
+    base_price: '',
+    status: 'active',
   })
-  const [file, setFile] = useState<File | null>(null)
 
   const load = () => {
     getProducts().then(setProducts).catch(console.error)
-    pb.collection('users')
-      .getFullList({ filter: "role='partner'" })
-      .then(setPartners)
-      .catch(console.error)
   }
+
   useEffect(() => {
     load()
   }, [])
 
+  useRealtime('products', () => {
+    load()
+  })
+
   const handleSave = async () => {
-    if (
-      !formData.name ||
-      !formData.original_price ||
-      !formData.promo_price ||
-      !formData.partner_id
-    ) {
+    if (!formData.name || !formData.base_price) {
       toast.error('Preencha os campos obrigatórios')
       return
     }
-    if (Number(formData.promo_price) > Number(formData.original_price)) {
-      toast.error('Preço promocional não pode ser maior')
-      return
-    }
     setLoading(true)
-    const data = new FormData()
-    data.append('name', formData.name)
-    data.append('description', formData.description)
-    data.append('original_price', formData.original_price)
-    data.append('promo_price', formData.promo_price)
-    data.append('active', String(formData.active))
-    data.append('partner_id', formData.partner_id)
-    if (file) data.append('image', file)
+    const data = {
+      name: formData.name,
+      description: formData.description,
+      base_price: Number(formData.base_price),
+      status: formData.status,
+    }
 
     try {
       if (editing) await updateProduct(editing.id, data)
@@ -100,13 +86,10 @@ export default function MasterProductsPage() {
     setEditing(p)
     setFormData({
       name: p.name,
-      description: p.description,
-      original_price: p.original_price,
-      promo_price: p.promo_price,
-      partner_id: p.partner_id,
-      active: p.active,
+      description: p.description || '',
+      base_price: p.base_price?.toString() || '0',
+      status: p.status || 'active',
     })
-    setFile(null)
     setOpen(true)
   }
 
@@ -120,12 +103,9 @@ export default function MasterProductsPage() {
             setFormData({
               name: '',
               description: '',
-              original_price: '',
-              promo_price: '',
-              partner_id: '',
-              active: true,
+              base_price: '',
+              status: 'active',
             })
-            setFile(null)
             setOpen(true)
           }}
         >
@@ -137,9 +117,7 @@ export default function MasterProductsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
-            <TableHead>Parceiro</TableHead>
-            <TableHead>Preço Original</TableHead>
-            <TableHead>Promoção</TableHead>
+            <TableHead>Preço Base</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
@@ -148,10 +126,12 @@ export default function MasterProductsPage() {
           {products.map((p) => (
             <TableRow key={p.id}>
               <TableCell className="font-medium">{p.name}</TableCell>
-              <TableCell>{p.expand?.partner_id?.name || 'N/A'}</TableCell>
-              <TableCell>R$ {p.original_price.toFixed(2)}</TableCell>
-              <TableCell>R$ {p.promo_price.toFixed(2)}</TableCell>
-              <TableCell>{p.active ? 'Ativo' : 'Inativo'}</TableCell>
+              <TableCell>R$ {p.base_price?.toFixed(2) || '0.00'}</TableCell>
+              <TableCell>
+                <Badge variant={p.status === 'active' ? 'default' : 'secondary'}>
+                  {p.status === 'active' ? 'Ativo' : 'Inativo'}
+                </Badge>
+              </TableCell>
               <TableCell className="text-right space-x-2">
                 <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                   <Edit className="h-4 w-4" />
@@ -164,7 +144,7 @@ export default function MasterProductsPage() {
           ))}
           {products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                 Nenhum produto cadastrado.
               </TableCell>
             </TableRow>
@@ -193,57 +173,28 @@ export default function MasterProductsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Parceiro</Label>
-              <Select
-                value={formData.partner_id}
-                onValueChange={(v) => setFormData({ ...formData, partner_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.map((pt) => (
-                    <SelectItem key={pt.id} value={pt.id}>
-                      {pt.name} ({pt.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Preço Original (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.original_price}
-                  onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Preço Promocional (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.promo_price}
-                  onChange={(e) => setFormData({ ...formData, promo_price: e.target.value })}
-                />
-              </div>
+              <Label>Preço Base (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.base_price}
+                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Imagem</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={formData.active}
-                onCheckedChange={(c) => setFormData({ ...formData, active: c })}
-              />
-              <Label>Ativo</Label>
+              <Label>Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(v) => setFormData({ ...formData, status: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex justify-end gap-2">
