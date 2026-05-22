@@ -95,6 +95,7 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>
+                      <TableHead>Responsável</TableHead>
                       <TableHead>Modalidade</TableHead>
                       <TableHead>Faixa BIN</TableHead>
                       <TableHead>Gateway</TableHead>
@@ -107,6 +108,9 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                     {companies.map((company) => (
                       <TableRow key={company.id}>
                         <TableCell className="font-medium">{company.name}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {company.expand?.owner_id?.name || 'Não atribuído'}
+                        </TableCell>
                         <TableCell>Modo {company.modality}</TableCell>
                         <TableCell className="font-mono">{company.bin_prefix}</TableCell>
                         <TableCell>{company.gateway_provider}</TableCell>
