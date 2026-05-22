@@ -12,3 +12,10 @@ export const getCompanyCardHolders = (companyId: string) =>
 
 export const updateCardHolder = (id: string, data: any) =>
   pb.collection('card_holders').update(id, data)
+
+export const importEmployees = (companyId: string, employees: any[]) =>
+  pb.send(`/backend/v1/companies/${companyId}/employees/import`, {
+    method: 'POST',
+    body: JSON.stringify({ employees }),
+    headers: { 'Content-Type': 'application/json' },
+  })
