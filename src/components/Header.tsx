@@ -1,7 +1,7 @@
 import { Bell, Search, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useAuthStore } from '@/stores/use-auth-store'
+import useAuthStore from '@/stores/use-auth-store'
 import {
   DropdownMenu,
   DropdownMenuContent,

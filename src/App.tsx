@@ -5,10 +5,10 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
-import { MasterDashboard } from './pages/master/MasterDashboard'
-import { CompanyDashboard } from './pages/company/CompanyDashboard'
-import { HolderDashboard } from './pages/holder/HolderDashboard'
-import { PartnerDashboard } from './pages/partner/PartnerDashboard'
+import MasterDashboard from './pages/master/MasterDashboard'
+import CompanyDashboard from './pages/company/CompanyDashboard'
+import HolderDashboard from './pages/holder/HolderDashboard'
+import PartnerDashboard from './pages/partner/PartnerDashboard'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>

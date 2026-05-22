@@ -1,29 +1,34 @@
 import { create } from 'zustand'
 
-export type Role = 'master' | 'company' | 'partner' | 'holder' | null
+export type Role = 'guest' | 'master' | 'company' | 'partner' | 'holder'
 
 interface User {
+  role: Role
   name: string
-  email: string
+  companyName?: string
+  email?: string
 }
 
 interface AuthState {
   role: Role
-  user: User | null
-  login: (role: Role) => void
+  user: User
+  login: (role: Role, name: string, companyName?: string) => void
   logout: () => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  role: null,
-  user: null,
-  login: (role) => {
-    let name = 'Usuário'
-    if (role === 'master') name = 'Administrador VMX'
-    if (role === 'company') name = 'Gestor de RH'
-    if (role === 'partner') name = 'Lojista Parceiro'
-    if (role === 'holder') name = 'João Silva'
-    set({ role, user: { name, email: 'contato@vclub.com.br' } })
-  },
-  logout: () => set({ role: null, user: null }),
+const useAuthStore = create<AuthState>((set) => ({
+  role: 'guest',
+  user: { role: 'guest', name: '', companyName: '' },
+  login: (role, name, companyName) =>
+    set({
+      role,
+      user: { role, name, companyName, email: 'contato@vclub.com.br' },
+    }),
+  logout: () =>
+    set({
+      role: 'guest',
+      user: { role: 'guest', name: '', companyName: '' },
+    }),
 }))
+
+export default useAuthStore

@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { QRCodeDisplay } from '@/components/QRCodeDisplay'
-import { useAuthStore } from '@/stores/use-auth-store'
+import useAuthStore from '@/stores/use-auth-store'
 
 const transactions = [
   {
@@ -41,7 +41,7 @@ const transactions = [
   },
 ]
 
-export function HolderDashboard() {
+export default function HolderDashboard() {
   const { user } = useAuthStore()
   const limitTotal = 2500
   const limitUsed = 850

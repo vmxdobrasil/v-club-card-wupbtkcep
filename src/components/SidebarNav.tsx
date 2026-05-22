@@ -9,7 +9,7 @@ import {
   Receipt,
   ShieldCheck,
 } from 'lucide-react'
-import { useAuthStore } from '@/stores/use-auth-store'
+import useAuthStore from '@/stores/use-auth-store'
 import { cn } from '@/lib/utils'
 
 export function SidebarNav() {
