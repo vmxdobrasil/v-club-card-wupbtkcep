@@ -20,19 +20,12 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Building2, CreditCard, DollarSign, TrendingUp, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { getCompanies } from '@/services/companies'
+import { useEffect, useState, useCallback } from 'react'
+import { getCompanies, type Company } from '@/services/companies'
 import { getCardHolders } from '@/services/card_holders'
 import { getTransactions } from '@/services/transactions'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { useRealtime } from '@/hooks/use-realtime'
+import { CompanyManagement } from '@/components/master/CompanyManagement'
 
 const volumeData = [
   { month: 'Jan', asaas: 1200000, others: 400000 },
@@ -54,12 +47,12 @@ export default function MasterDashboard() {
     others: { label: 'Outros', color: 'hsl(var(--chart-2))' },
   }
 
-  const [companies, setCompanies] = useState<any[]>([])
+  const [companies, setCompanies] = useState<Company[]>([])
   const [cardHolders, setCardHolders] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     Promise.all([getCompanies(), getCardHolders(), getTransactions()])
       .then(([comps, holders, txs]) => {
         setCompanies(comps)
@@ -68,6 +61,14 @@ export default function MasterDashboard() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useRealtime('companies', () => {
+    getCompanies().then(setCompanies).catch(console.error)
+  })
 
   if (loading)
     return (
@@ -218,43 +219,7 @@ export default function MasterDashboard() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Empresas e Alocação de BINs</CardTitle>
-          <CardDescription>Gestão das faixas da BIN 636943</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Modalidade</TableHead>
-                <TableHead>Faixa BIN</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {companies.map((company) => (
-                <TableRow key={company.id}>
-                  <TableCell className="font-medium">{company.name}</TableCell>
-                  <TableCell>Modo {company.modality}</TableCell>
-                  <TableCell className="font-mono">{company.bin_prefix}.xxxx</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={company.status === 'active' ? 'default' : 'secondary'}
-                      className={
-                        company.status === 'active' ? 'bg-emerald-500 hover:bg-emerald-600' : ''
-                      }
-                    >
-                      {company.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <CompanyManagement companies={companies} />
     </div>
   )
 }
