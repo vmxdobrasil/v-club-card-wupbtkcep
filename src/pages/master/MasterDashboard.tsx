@@ -22,8 +22,8 @@ import {
 import { Building2, CreditCard, DollarSign, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { getCompanies, type Company } from '@/services/companies'
-import { getCardHolders } from '@/services/card_holders'
-import { getTransactions } from '@/services/transactions'
+import { getCardHolders, type CardHolder } from '@/services/card_holders'
+import { getTransactions, type Transaction } from '@/services/transactions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { CompanyManagement } from '@/components/master/CompanyManagement'
 import { useAuth } from '@/hooks/use-auth'
@@ -52,8 +52,8 @@ export default function MasterDashboard() {
 
   const { user, loading: authLoading } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
-  const [cardHolders, setCardHolders] = useState<any[]>([])
-  const [transactions, setTransactions] = useState<any[]>([])
+  const [cardHolders, setCardHolders] = useState<CardHolder[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

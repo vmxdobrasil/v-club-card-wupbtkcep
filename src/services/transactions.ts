@@ -1,18 +1,18 @@
 import pb from '@/lib/pocketbase/client'
 
-export const getTransactions = () =>
-  pb
-    .collection('transactions')
-    .getFullList({ sort: '-created', expand: 'holder_id.user_id,company_id,partner_id' })
-export const getMyTransactions = (holderId: string) =>
-  pb
-    .collection('transactions')
-    .getFullList({ filter: `holder_id="${holderId}"`, sort: '-created', expand: 'partner_id' })
-export const createTransaction = (data: any) => pb.collection('transactions').create(data)
+export type Transaction = {
+  id: string
+  holder_id: string
+  company_id: string
+  partner_id?: string
+  amount: number
+  type: 'debit' | 'credit'
+  status: 'pending' | 'approved' | 'rejected'
+  split_data?: any
+  gateway_ref?: string
+  created: string
+  updated: string
+}
 
-export const getCompanyTransactions = (companyId: string, filterStr?: string) =>
-  pb.collection('transactions').getFullList({
-    filter: `company_id="${companyId}"${filterStr ? ` && (${filterStr})` : ''}`,
-    sort: '-created',
-    expand: 'holder_id.user_id,partner_id',
-  })
+export const getTransactions = () =>
+  pb.collection('transactions').getFullList<Transaction>({ sort: '-created' })

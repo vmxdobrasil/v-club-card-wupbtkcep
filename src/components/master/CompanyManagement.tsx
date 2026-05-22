@@ -89,6 +89,7 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>
+                      <TableHead>Prefixo BIN</TableHead>
                       <TableHead>Taxa de Comissão (%)</TableHead>
                       <TableHead>Modalidade</TableHead>
                       <TableHead>Gateway</TableHead>
@@ -100,6 +101,7 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                     {companies.map((company) => (
                       <TableRow key={company.id}>
                         <TableCell className="font-medium">{company.name}</TableCell>
+                        <TableCell className="font-mono">{company.bin_prefix}</TableCell>
                         <TableCell>{company.commission_rate}%</TableCell>
                         <TableCell>Modo {company.modality}</TableCell>
                         <TableCell>{company.gateway_provider}</TableCell>
