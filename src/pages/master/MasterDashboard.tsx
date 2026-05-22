@@ -25,7 +25,6 @@ import { getCompanies, type Company } from '@/services/companies'
 import { getCardHolders, type CardHolder } from '@/services/card_holders'
 import { getTransactions, type Transaction } from '@/services/transactions'
 import { useRealtime } from '@/hooks/use-realtime'
-import { CompanyManagement } from '@/components/master/CompanyManagement'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -256,8 +255,6 @@ export default function MasterDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      <CompanyManagement companies={companies} />
     </div>
   )
 }

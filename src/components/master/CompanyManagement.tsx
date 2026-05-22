@@ -17,7 +17,13 @@ import { toast } from 'sonner'
 import { CompanyForm } from './CompanyForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export function CompanyManagement({ companies }: { companies: Company[] }) {
+export function CompanyManagement({
+  companies,
+  defaultTab = 'companies',
+}: {
+  companies: Company[]
+  defaultTab?: string
+}) {
   const { user } = useAuth()
   const isMaster = user?.role === 'master'
   const [formOpen, setFormOpen] = useState(false)
@@ -60,7 +66,7 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
         )}
       </div>
 
-      <Tabs defaultValue="companies" className="w-full">
+      <Tabs defaultValue={defaultTab} key={defaultTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="companies">Empresas Cliente</TabsTrigger>
           <TabsTrigger value="bins">Controle de BINs</TabsTrigger>

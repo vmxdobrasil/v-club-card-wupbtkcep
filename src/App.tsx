@@ -7,6 +7,7 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import MasterDashboard from './pages/master/MasterDashboard'
+import MasterCompaniesPage from './pages/master/MasterCompaniesPage'
 import MasterProductsPage from './pages/master/MasterProductsPage'
 import MasterCatalogsPage from './pages/master/MasterCatalogsPage'
 import MasterCatalogDetailsPage from './pages/master/MasterCatalogDetailsPage'
@@ -27,6 +28,11 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/master" element={<MasterDashboard />} />
+            <Route
+              path="/master/companies"
+              element={<MasterCompaniesPage defaultTab="companies" />}
+            />
+            <Route path="/master/bin" element={<MasterCompaniesPage defaultTab="bins" />} />
             <Route path="/master/products" element={<MasterProductsPage />} />
             <Route path="/master/catalogs" element={<MasterCatalogsPage />} />
             <Route path="/master/catalogs/:id" element={<MasterCatalogDetailsPage />} />

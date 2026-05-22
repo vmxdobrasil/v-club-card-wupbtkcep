@@ -29,8 +29,8 @@ export function AppSidebar() {
   const navItems = {
     master: [
       { title: 'Dashboard Global', url: '/master', icon: LayoutDashboard },
-      { title: 'Controle de BINs', url: '#', icon: CreditCard },
-      { title: 'Empresas Clientes', url: '#', icon: Store },
+      { title: 'Controle de BINs', url: '/master/bin', icon: CreditCard },
+      { title: 'Empresas Clientes', url: '/master/companies', icon: Store },
       { title: 'Relatórios Financeiros', url: '#', icon: PieChart },
       { title: 'Auditoria', url: '#', icon: ShieldAlert },
       { title: 'Catálogos', url: '/master/catalogs', icon: Store },
