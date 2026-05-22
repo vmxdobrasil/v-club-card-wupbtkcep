@@ -123,7 +123,7 @@ migrate(
         fields: [
           { name: 'name', type: 'text', required: true },
           { name: 'description', type: 'text' },
-          { name: 'status', type: 'select', values: ['active', 'inactive'] },
+          { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
           { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
           { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
         ],
