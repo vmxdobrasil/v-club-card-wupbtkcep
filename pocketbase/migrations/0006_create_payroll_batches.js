@@ -21,12 +21,19 @@ migrate(
           collectionId: app.findCollectionByNameOrId('companies').id,
           maxSelect: 1,
         },
-        { name: 'type', type: 'select', required: true, selectValues: ['export', 'import'] },
+        {
+          name: 'type',
+          type: 'select',
+          required: true,
+          values: ['export', 'import'],
+          maxSelect: 1,
+        },
         {
           name: 'status',
           type: 'select',
           required: true,
-          selectValues: ['pending', 'processed', 'error'],
+          values: ['pending', 'processed', 'error'],
+          maxSelect: 1,
         },
         { name: 'batch_date', type: 'date', required: true },
         {
