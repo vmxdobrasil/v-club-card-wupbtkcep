@@ -23,12 +23,6 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingCompany, setEditingCompany] = useState<Company | undefined>()
 
-  const uniqueBins = Array.from(new Set(companies.map((c) => c.bin_prefix))).filter(Boolean)
-  const binGroups = uniqueBins.map((bin) => ({
-    bin_prefix: bin,
-    companies: companies.filter((c) => c.bin_prefix === bin),
-  }))
-
   const handleCreate = () => {
     setEditingCompany(undefined)
     setFormOpen(true)
@@ -79,7 +73,7 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3 border border-dashed rounded-lg">
                   <Building2 className="w-10 h-10 text-muted-foreground" />
                   <div className="space-y-1">
-                    <p className="font-medium text-foreground">Nenhuma empresa cadastrada</p>
+                    <p className="font-medium text-foreground">Nenhuma empresa encontrada</p>
                     <p className="text-sm text-muted-foreground">
                       Cadastre a primeira empresa para iniciar a operação e alocar BINs.
                     </p>
@@ -95,11 +89,9 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>
-                      <TableHead>Responsável</TableHead>
+                      <TableHead>Taxa de Comissão (%)</TableHead>
                       <TableHead>Modalidade</TableHead>
-                      <TableHead>Faixa BIN</TableHead>
                       <TableHead>Gateway</TableHead>
-                      <TableHead>Taxa (%)</TableHead>
                       <TableHead>Status</TableHead>
                       {isMaster && <TableHead className="text-right">Ações</TableHead>}
                     </TableRow>
@@ -108,13 +100,9 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                     {companies.map((company) => (
                       <TableRow key={company.id}>
                         <TableCell className="font-medium">{company.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {company.expand?.owner_id?.name || 'Não atribuído'}
-                        </TableCell>
-                        <TableCell>Modo {company.modality}</TableCell>
-                        <TableCell className="font-mono">{company.bin_prefix}</TableCell>
-                        <TableCell>{company.gateway_provider}</TableCell>
                         <TableCell>{company.commission_rate}%</TableCell>
+                        <TableCell>Modo {company.modality}</TableCell>
+                        <TableCell>{company.gateway_provider}</TableCell>
                         <TableCell>
                           <Badge
                             variant={company.status === 'active' ? 'default' : 'secondary'}
@@ -154,13 +142,13 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
         <TabsContent value="bins">
           <Card>
             <CardHeader>
-              <CardTitle>Prefixos BIN Alocados</CardTitle>
+              <CardTitle>Controle de BINs</CardTitle>
               <CardDescription>
-                Resumo dos prefixos BIN em uso e suas empresas associadas.
+                Relação de empresas e seus respectivos prefixos BIN.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {binGroups.length === 0 ? (
+              {companies.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3 border border-dashed rounded-lg">
                   <CreditCard className="w-10 h-10 text-muted-foreground" />
                   <p className="font-medium text-foreground">Nenhum BIN alocado</p>
@@ -172,25 +160,15 @@ export function CompanyManagement({ companies }: { companies: Company[] }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Empresa</TableHead>
                       <TableHead>Prefixo BIN</TableHead>
-                      <TableHead>Empresas Utilizando</TableHead>
-                      <TableHead>Total de Empresas</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {binGroups.map((group) => (
-                      <TableRow key={group.bin_prefix}>
-                        <TableCell className="font-mono font-medium">{group.bin_prefix}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {group.companies.map((c) => (
-                              <Badge key={c.id} variant="outline">
-                                {c.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>{group.companies.length}</TableCell>
+                    {companies.map((company) => (
+                      <TableRow key={company.id}>
+                        <TableCell className="font-medium">{company.name}</TableCell>
+                        <TableCell className="font-mono">{company.bin_prefix}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

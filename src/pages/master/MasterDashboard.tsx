@@ -137,11 +137,11 @@ export default function MasterDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              R$ {(totalVolume + 12500000).toLocaleString('pt-BR')}
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                totalVolume,
+              )}
             </div>
-            <p className="text-xs text-emerald-500 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" /> +20% em relação ao mês passado
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Volume total processado</p>
           </CardContent>
         </Card>
         <Card>
@@ -151,9 +151,11 @@ export default function MasterDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              R$ {(totalCommission + 156250).toLocaleString('pt-BR')}
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                totalCommission,
+              )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Média de 0.8% por transação</p>
+            <p className="text-xs text-muted-foreground mt-1">Receita de comissões acumulada</p>
           </CardContent>
         </Card>
         <Card>
@@ -162,10 +164,8 @@ export default function MasterDashboard() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {companies.length > 0 ? companies.length : 142}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">+12 novas este mês</p>
+            <div className="text-2xl font-bold">{companies.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Empresas clientes cadastradas</p>
           </CardContent>
         </Card>
         <Card>
@@ -174,10 +174,8 @@ export default function MasterDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {cardHolders.length > 0 ? cardHolders.length : 45231}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Ativos na BIN 636943</p>
+            <div className="text-2xl font-bold">{cardHolders.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total de cartões emitidos</p>
           </CardContent>
         </Card>
       </div>
