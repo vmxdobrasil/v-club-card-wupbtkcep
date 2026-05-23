@@ -7,9 +7,11 @@ export const getCompanyLogs = (companyId: string) =>
     expand: 'user_id',
   })
 
-export const getBinLogs = (companyId: string) =>
-  pb.collection('bin_history').getFullList({
-    filter: `company_id="${companyId}"`,
+export const getBinAuditLogs = (companyId?: string) => {
+  const filter = companyId ? `company_id="${companyId}"` : ''
+  return pb.collection('bin_audit_logs').getFullList({
+    filter,
     sort: '-created',
-    expand: 'changed_by',
+    expand: 'company_id,changed_by',
   })
+}

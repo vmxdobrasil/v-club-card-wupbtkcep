@@ -61,15 +61,16 @@ migrate(
     })
     app.save(companyProducts)
 
-    const binLogs = new Collection({
-      name: 'bin_logs',
+    const catalogs = new Collection({
+      name: 'catalogs',
       type: 'base',
-      listRule: "@request.auth.role = 'master'",
-      viewRule: "@request.auth.role = 'master'",
-      createRule: '',
-      updateRule: '',
-      deleteRule: '',
+      listRule: "@request.auth.id != ''",
+      viewRule: "@request.auth.id != ''",
+      createRule: "@request.auth.role = 'master'",
+      updateRule: "@request.auth.role = 'master'",
+      deleteRule: "@request.auth.role = 'master'",
       fields: [
+        { name: 'name', type: 'text', required: true },
         {
           name: 'company_id',
           type: 'relation',
@@ -77,17 +78,15 @@ migrate(
           required: true,
           maxSelect: 1,
         },
-        { name: 'old_bin', type: 'text' },
-        { name: 'new_bin', type: 'text' },
-        { name: 'changed_by', type: 'relation', collectionId: usersId, maxSelect: 1 },
+        { name: 'items', type: 'json' },
         { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
         { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
       ],
     })
-    app.save(binLogs)
+    app.save(catalogs)
   },
   (app) => {
-    app.delete(app.findCollectionByNameOrId('bin_logs'))
+    app.delete(app.findCollectionByNameOrId('catalogs'))
     app.delete(app.findCollectionByNameOrId('company_products'))
     app.delete(app.findCollectionByNameOrId('products'))
   },

@@ -26,18 +26,18 @@ onRecordAfterUpdateSuccess((e) => {
     }
   }
 
-  // Acceptance Criteria: BIN Change History (Audit Log) -> bin_history collection
+  // Acceptance Criteria: BIN Traceability & Logs -> bin_audit_logs collection
   if (oldBin !== newBin) {
     try {
-      const binHistoryCol = $app.findCollectionByNameOrId('bin_history')
-      const binLog = new Record(binHistoryCol)
+      const binAuditLogsCol = $app.findCollectionByNameOrId('bin_audit_logs')
+      const binLog = new Record(binAuditLogsCol)
       binLog.set('company_id', e.record.id)
       binLog.set('old_prefix', oldBin)
       binLog.set('new_prefix', newBin)
       if (e.auth) binLog.set('changed_by', e.auth.id)
       $app.saveNoValidate(binLog)
     } catch (err) {
-      $app.logger().error('Error saving bin history', 'error', err.message)
+      $app.logger().error('Error saving bin audit log', 'error', err.message)
     }
   }
 

@@ -35,7 +35,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { PartnerDragDropManager } from '@/components/master/PartnerDragDropManager'
+import { CatalogBuilder } from '@/components/master/CatalogBuilder'
+import { BinHistoryTable } from '@/components/master/BinHistoryTable'
 
 const volumeData = [
   { month: 'Jan', asaas: 1200000, others: 400000 },
@@ -87,12 +88,6 @@ export default function MasterDashboard() {
 
   useRealtime('companies', () => {
     getCompanies().then(setCompanies).catch(console.error)
-  })
-  useRealtime('bin_history', () => {
-    // Just to satisfy AC requirement for real-time updates on Dashboard
-  })
-  useRealtime('company_products', () => {
-    // Just to satisfy AC requirement for real-time updates on Dashboard
   })
 
   if (authLoading || loading)
@@ -278,7 +273,13 @@ export default function MasterDashboard() {
           </CardContent>
         </Card>
 
-        <PartnerDragDropManager />
+        <div className="md:col-span-7">
+          <CatalogBuilder />
+        </div>
+
+        <div className="md:col-span-7">
+          <BinHistoryTable />
+        </div>
 
         {/* Network Tree view */}
         <Card className="md:col-span-7">
@@ -314,7 +315,7 @@ export default function MasterDashboard() {
             ) : (
               <Accordion type="multiple" className="w-full">
                 {filteredHeadquarters.map((hq) => {
-                  const myBranches = branches.filter((b) => b.parent_company_id === hq.id)
+                  const myBranches = branches.filter((b) => b.parent_id === hq.id)
                   return (
                     <AccordionItem key={hq.id} value={hq.id}>
                       <AccordionTrigger className="hover:no-underline">

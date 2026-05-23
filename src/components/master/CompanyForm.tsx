@@ -39,26 +39,26 @@ const schema = z
     modality: z.enum(['1', '2', 'both']),
     gateway_provider: z.enum(['Asaas', 'Alternative', 'None/Manual']),
     status: z.enum(['active', 'inactive']),
-    address: z.string().optional(),
-    number: z.string().optional(),
+    address_street: z.string().optional(),
+    address_number: z.string().optional(),
     complement: z.string().optional(),
-    neighborhood: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    cep: z.string().optional(),
+    address_neighborhood: z.string().optional(),
+    address_city: z.string().optional(),
+    address_state: z.string().optional(),
+    zip_code: z.string().optional(),
     social_links: z.any().optional(),
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
     is_headquarters: z.boolean().default(false),
     is_partner: z.boolean().default(false),
-    parent_company_id: z.string().optional(),
+    parent_id: z.string().optional(),
     market_segment: z.string().optional(),
     cobranded_id: z.string().optional(),
     affiliate_id: z.string().optional(),
   })
-  .refine((data) => data.is_headquarters || !!data.parent_company_id, {
+  .refine((data) => data.is_headquarters || !!data.parent_id, {
     message: 'Selecione a matriz para esta filial',
-    path: ['parent_company_id'],
+    path: ['parent_id'],
   })
 
 type FormValues = z.infer<typeof schema>
@@ -126,13 +126,19 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       modality: '1',
       gateway_provider: 'Asaas',
       status: 'active',
-      address: '',
-      cep: '',
+      address_street: '',
+      address_number: '',
+      complement: '',
+      address_neighborhood: '',
+      address_city: '',
+      address_state: '',
+      zip_code: '',
+      social_links: {},
       phone: '',
       whatsapp: '',
       is_headquarters: false,
       is_partner: false,
-      parent_company_id: '',
+      parent_id: '',
       market_segment: '',
       cobranded_id: '',
       affiliate_id: '',
@@ -151,19 +157,19 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               modality: company.modality,
               gateway_provider: company.gateway_provider,
               status: company.status,
-              address: company.address || '',
-              number: company.number || '',
+              address_street: company.address_street || '',
+              address_number: company.address_number || '',
               complement: company.complement || '',
-              neighborhood: company.neighborhood || '',
-              city: company.city || '',
-              state: company.state || '',
-              cep: company.cep || '',
+              address_neighborhood: company.address_neighborhood || '',
+              address_city: company.address_city || '',
+              address_state: company.address_state || '',
+              zip_code: company.zip_code || '',
               social_links: company.social_links || {},
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
               is_headquarters: company.is_headquarters ?? false,
               is_partner: company.is_partner ?? false,
-              parent_company_id: company.parent_company_id || '',
+              parent_id: company.parent_id || '',
               market_segment: company.market_segment || '',
               cobranded_id: company.cobranded_id || '',
               affiliate_id: company.affiliate_id || '',
@@ -176,19 +182,19 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               modality: '1',
               gateway_provider: 'Asaas',
               status: 'active',
-              address: '',
-              number: '',
+              address_street: '',
+              address_number: '',
               complement: '',
-              neighborhood: '',
-              city: '',
-              state: '',
-              cep: '',
+              address_neighborhood: '',
+              address_city: '',
+              address_state: '',
+              zip_code: '',
               social_links: {},
               phone: '',
               whatsapp: '',
               is_headquarters: false,
               is_partner: false,
-              parent_company_id: '',
+              parent_id: '',
               market_segment: '',
               cobranded_id: '',
               affiliate_id: '',
@@ -201,7 +207,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
   const isHeadquarters = form.watch('is_headquarters')
 
   const handleFetchAddress = async () => {
-    const cep = form.getValues('cep') || ''
+    const cep = form.getValues('zip_code') || ''
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length === 8) {
       setIsFetchingCep(true)
@@ -209,10 +215,10 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const data = await res.json()
         if (!data.erro) {
-          form.setValue('address', data.logradouro || '')
-          form.setValue('neighborhood', data.bairro || '')
-          form.setValue('city', data.localidade || '')
-          form.setValue('state', data.uf || '')
+          form.setValue('address_street', data.logradouro || '')
+          form.setValue('address_neighborhood', data.bairro || '')
+          form.setValue('address_city', data.localidade || '')
+          form.setValue('address_state', data.uf || '')
           toast.success('Endereço preenchido automaticamente.')
         } else {
           toast.error('CEP não encontrado.')
@@ -429,7 +435,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
-                      name="cep"
+                      name="zip_code"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>CEP</FormLabel>
@@ -463,7 +469,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     <div className="col-span-1 md:col-span-2 hidden md:block"></div>
                     <FormField
                       control={form.control}
-                      name="address"
+                      name="address_street"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-3">
                           <FormLabel>Logradouro</FormLabel>
@@ -476,7 +482,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     />
                     <FormField
                       control={form.control}
-                      name="number"
+                      name="address_number"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-1">
                           <FormLabel>Número</FormLabel>
@@ -502,7 +508,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     />
                     <FormField
                       control={form.control}
-                      name="neighborhood"
+                      name="address_neighborhood"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>Bairro</FormLabel>
@@ -515,7 +521,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     />
                     <FormField
                       control={form.control}
-                      name="city"
+                      name="address_city"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-3">
                           <FormLabel>Cidade</FormLabel>
@@ -528,7 +534,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     />
                     <FormField
                       control={form.control}
-                      name="state"
+                      name="address_state"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-1">
                           <FormLabel>Estado (UF)</FormLabel>
@@ -574,42 +580,6 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       )}
                     />
                   </div>
-
-                  <div className="mt-6 border-t pt-4">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-4">
-                      Redes Sociais e Links
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="social_links.website"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Website</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={field.value || ''}
-                                placeholder="https://..."
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="social_links.instagram"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Instagram</FormLabel>
-                            <FormControl>
-                              <Input {...field} value={field.value || ''} placeholder="@empresa" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
                 </TabsContent>
 
                 {/* ABA: Hierarquia */}
@@ -631,7 +601,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                               checked={field.value}
                               onCheckedChange={(val) => {
                                 field.onChange(val)
-                                if (val) form.setValue('parent_company_id', '')
+                                if (val) form.setValue('parent_id', '')
                               }}
                             />
                           </FormControl>
@@ -642,7 +612,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     {!isHeadquarters && (
                       <FormField
                         control={form.control}
-                        name="parent_company_id"
+                        name="parent_id"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
                             <FormLabel>Selecione a Matriz</FormLabel>
