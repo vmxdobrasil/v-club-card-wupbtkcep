@@ -12,13 +12,13 @@ export type Company = {
   owner_id?: string
 
   cnpj: string
-  street?: string
+  address?: string
   number?: string
   complement?: string
   neighborhood?: string
   city?: string
   state?: string
-  zip_code?: string
+  cep?: string
   social_links?: any
   phone?: string
   whatsapp?: string

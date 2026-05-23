@@ -41,7 +41,7 @@ export function BinHistoryTable() {
     loadLogs()
   }, [selectedCompany])
 
-  useRealtime('bin_history', () => {
+  useRealtime('bin_prefix_history', () => {
     loadLogs()
   })
 

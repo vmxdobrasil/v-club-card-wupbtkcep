@@ -26,13 +26,13 @@ onRecordAfterUpdateSuccess((e) => {
     }
   }
 
-  // Acceptance Criteria: BIN Traceability & Logs -> bin_history collection
+  // Acceptance Criteria: BIN Traceability & Logs -> bin_prefix_history collection
   if (oldBin !== newBin) {
     try {
-      const binAuditLogsCol = $app.findCollectionByNameOrId('bin_history')
+      const binAuditLogsCol = $app.findCollectionByNameOrId('bin_prefix_history')
       const binLog = new Record(binAuditLogsCol)
       binLog.set('company_id', e.record.id)
-      binLog.set('old_prefix', oldBin)
+      binLog.set('old_prefix', oldBin || '')
       binLog.set('new_prefix', newBin)
       if (e.auth) binLog.set('changed_by', e.auth.id)
       $app.saveNoValidate(binLog)

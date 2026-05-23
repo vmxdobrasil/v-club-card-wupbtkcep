@@ -1,16 +1,15 @@
 migrate(
   (app) => {
     const companyCol = app.findCollectionByNameOrId('companies')
-    const productCol = app.findCollectionByNameOrId('products')
 
     const collection = new Collection({
-      name: 'company_products',
+      name: 'bin_prefix_history',
       type: 'base',
-      listRule: "@request.auth.id != ''",
-      viewRule: "@request.auth.id != ''",
-      createRule: "@request.auth.role = 'master'",
-      updateRule: "@request.auth.role = 'master'",
-      deleteRule: "@request.auth.role = 'master'",
+      listRule: "@request.auth.role = 'master' || @request.auth.role = 'company'",
+      viewRule: "@request.auth.role = 'master' || @request.auth.role = 'company'",
+      createRule: null,
+      updateRule: null,
+      deleteRule: null,
       fields: [
         {
           name: 'company_id',
@@ -19,15 +18,15 @@ migrate(
           collectionId: companyCol.id,
           maxSelect: 1,
         },
+        { name: 'old_prefix', type: 'text' },
+        { name: 'new_prefix', type: 'text' },
         {
-          name: 'product_id',
+          name: 'changed_by',
           type: 'relation',
-          required: true,
-          collectionId: productCol.id,
+          required: false,
+          collectionId: '_pb_users_auth_',
           maxSelect: 1,
         },
-        { name: 'status', type: 'select', values: ['active', 'inactive'], required: false },
-        { name: 'custom_price', type: 'number' },
         { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
         { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
       ],
@@ -35,7 +34,7 @@ migrate(
     app.save(collection)
   },
   (app) => {
-    const collection = app.findCollectionByNameOrId('company_products')
+    const collection = app.findCollectionByNameOrId('bin_prefix_history')
     app.delete(collection)
   },
 )

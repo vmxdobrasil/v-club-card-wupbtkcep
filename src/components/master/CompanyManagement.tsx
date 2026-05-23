@@ -157,7 +157,20 @@ export function CompanyManagement({
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="font-mono">{company.bin_prefix}</TableCell>
+                        <TableCell className="font-mono">
+                          <div className="flex items-center gap-2">
+                            {company.bin_prefix}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title="Histórico de BIN"
+                              onClick={() => handleViewHistory(company)}
+                            >
+                              <History className="w-3 h-3 text-muted-foreground hover:text-amber-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div>Modo {company.modality}</div>
                           <div className="text-xs text-muted-foreground">
@@ -178,14 +191,6 @@ export function CompanyManagement({
                         </TableCell>
                         {isMaster && (
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Histórico"
-                              onClick={() => handleViewHistory(company)}
-                            >
-                              <History className="w-4 h-4 text-amber-500" />
-                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"

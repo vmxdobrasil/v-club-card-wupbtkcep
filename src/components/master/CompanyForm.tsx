@@ -39,13 +39,13 @@ const schema = z
     modality: z.enum(['1', '2', 'both']),
     gateway_provider: z.enum(['Asaas', 'Alternative', 'None/Manual']),
     status: z.enum(['active', 'inactive']),
-    street: z.string().optional(),
+    address: z.string().optional(),
     number: z.string().optional(),
     complement: z.string().optional(),
     neighborhood: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
-    zip_code: z.string().optional(),
+    cep: z.string().optional(),
     social_links: z.any().optional(),
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
@@ -157,13 +157,13 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               modality: company.modality,
               gateway_provider: company.gateway_provider,
               status: company.status,
-              street: company.street || '',
+              address: company.address || '',
               number: company.number || '',
               complement: company.complement || '',
               neighborhood: company.neighborhood || '',
               city: company.city || '',
               state: company.state || '',
-              zip_code: company.zip_code || '',
+              cep: company.cep || '',
               social_links: company.social_links || {},
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
@@ -182,13 +182,13 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               modality: '1',
               gateway_provider: 'Asaas',
               status: 'active',
-              street: '',
+              address: '',
               number: '',
               complement: '',
               neighborhood: '',
               city: '',
               state: '',
-              zip_code: '',
+              cep: '',
               social_links: {},
               phone: '',
               whatsapp: '',
@@ -207,7 +207,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
   const isHeadquarters = form.watch('is_headquarters')
 
   const handleFetchAddress = async () => {
-    const cep = form.getValues('zip_code') || ''
+    const cep = form.getValues('cep') || ''
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length === 8) {
       setIsFetchingCep(true)
@@ -215,21 +215,21 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const data = await res.json()
         if (!data.erro) {
-          form.setValue('street', data.logradouro || '')
+          form.setValue('address', data.logradouro || '')
           form.setValue('neighborhood', data.bairro || '')
           form.setValue('city', data.localidade || '')
           form.setValue('state', data.uf || '')
           toast.success('Endereço preenchido automaticamente.')
         } else {
-          toast.error('CEP não encontrado.')
+          form.setError('cep', { message: 'CEP não encontrado.' })
         }
       } catch (err) {
-        toast.error('Erro ao buscar CEP.')
+        form.setError('cep', { message: 'Erro ao buscar CEP.' })
       } finally {
         setIsFetchingCep(false)
       }
     } else {
-      toast.error('Preencha um CEP válido.')
+      form.setError('cep', { message: 'Preencha um CEP válido (8 dígitos).' })
     }
   }
 
@@ -435,7 +435,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
-                      name="zip_code"
+                      name="cep"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>CEP</FormLabel>
@@ -444,7 +444,14 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                               <Input
                                 {...field}
                                 value={field.value || ''}
-                                onChange={(e) => field.onChange(applyCepMask(e.target.value))}
+                                onChange={(e) => {
+                                  const val = applyCepMask(e.target.value)
+                                  field.onChange(val)
+                                }}
+                                onBlur={(e) => {
+                                  field.onBlur()
+                                  handleFetchAddress()
+                                }}
                                 placeholder="00000-000"
                               />
                             </FormControl>
@@ -469,7 +476,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     <div className="col-span-1 md:col-span-2 hidden md:block"></div>
                     <FormField
                       control={form.control}
-                      name="street"
+                      name="address"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-3">
                           <FormLabel>Logradouro</FormLabel>

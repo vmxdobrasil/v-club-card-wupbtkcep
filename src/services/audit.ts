@@ -1,19 +1,16 @@
 import pb from '@/lib/pocketbase/client'
 
-export const getCompanyLogs = (companyId: string) =>
-  pb.collection('audit_logs').getFullList({
-    filter: `collection_name="companies" && record_id="${companyId}"`,
-    sort: '-created',
-    expand: 'user_id',
-  })
-
 export const getBinAuditLogs = (companyId?: string) => {
-  const filter = companyId ? `company_id="${companyId}"` : ''
-  return pb.collection('bin_history').getFullList({
-    filter,
-    sort: '-created',
-    expand: 'company_id,changed_by',
-  })
+  const filter = companyId ? `company_id = "${companyId}"` : ''
+  return pb
+    .collection('bin_prefix_history')
+    .getFullList({ filter, expand: 'company_id,changed_by', sort: '-created' })
 }
 
-export const getBinLogs = getBinAuditLogs
+export const getBinLogs = (companyId: string) => {
+  return pb.collection('bin_prefix_history').getFullList({
+    filter: `company_id = "${companyId}"`,
+    expand: 'changed_by',
+    sort: '-created',
+  })
+}
