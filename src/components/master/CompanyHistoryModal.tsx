@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { getCompanyLogs } from '@/services/audit'
+import { getBinLogs } from '@/services/audit'
 import { format } from 'date-fns'
 import { Loader2, History } from 'lucide-react'
 
@@ -25,7 +25,7 @@ export function CompanyHistoryModal({
   useEffect(() => {
     if (open && companyId) {
       setLoading(true)
-      getCompanyLogs(companyId)
+      getBinLogs(companyId)
         .then(setLogs)
         .catch(console.error)
         .finally(() => setLoading(false))
@@ -37,9 +37,9 @@ export function CompanyHistoryModal({
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" /> Histórico de Alterações
+            <History className="w-5 h-5 text-primary" /> Histórico de BINs
           </DialogTitle>
-          <DialogDescription>Log de auditoria das mudanças sensíveis da empresa.</DialogDescription>
+          <DialogDescription>Log de auditoria das mudanças de BIN da empresa.</DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
           {loading ? (
@@ -58,24 +58,26 @@ export function CompanyHistoryModal({
                     {format(new Date(log.created), 'dd/MM/yyyy HH:mm')}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Por: {log.expand?.user_id?.name || log.expand?.user_id?.email || 'Sistema'}
+                    Por:{' '}
+                    {log.expand?.changed_by?.name || log.expand?.changed_by?.email || 'Sistema'}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  {log.details?.bin_prefix && (
-                    <div className="text-xs bg-muted/50 p-2 rounded">
-                      <span className="font-medium text-foreground">BIN:</span>{' '}
-                      {log.details.bin_prefix.old || 'N/A'} <span className="text-primary">→</span>{' '}
-                      {log.details.bin_prefix.new}
+                  <div className="text-xs bg-muted/50 p-2 rounded flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-foreground text-xs block mb-1">
+                        BIN Anterior
+                      </span>
+                      <span className="font-mono">{log.previous_bin || 'N/A'}</span>
                     </div>
-                  )}
-                  {log.details?.status && (
-                    <div className="text-xs bg-muted/50 p-2 rounded">
-                      <span className="font-medium text-foreground">Status:</span>{' '}
-                      {log.details.status.old} <span className="text-primary">→</span>{' '}
-                      {log.details.status.new}
+                    <span className="text-primary font-bold mx-2">→</span>
+                    <div className="text-right">
+                      <span className="font-medium text-foreground text-xs block mb-1">
+                        Novo BIN
+                      </span>
+                      <span className="font-mono">{log.new_bin}</span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             ))

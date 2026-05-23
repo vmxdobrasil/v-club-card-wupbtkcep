@@ -39,6 +39,11 @@ const schema = z
     gateway_provider: z.enum(['Asaas', 'Alternative', 'None/Manual']),
     status: z.enum(['active', 'inactive']),
     address: z.string().optional(),
+    number: z.string().optional(),
+    complement: z.string().optional(),
+    neighborhood: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
     zip_code: z.string().optional(),
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
@@ -142,6 +147,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               gateway_provider: company.gateway_provider,
               status: company.status,
               address: company.address || '',
+              number: company.number || '',
+              complement: company.complement || '',
+              neighborhood: company.neighborhood || '',
+              city: company.city || '',
+              state: company.state || '',
               zip_code: company.zip_code || '',
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
@@ -160,6 +170,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               gateway_provider: 'Asaas',
               status: 'active',
               address: '',
+              number: '',
+              complement: '',
+              neighborhood: '',
+              city: '',
+              state: '',
               zip_code: '',
               phone: '',
               whatsapp: '',
@@ -185,10 +200,10 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const data = await res.json()
         if (!data.erro) {
-          form.setValue(
-            'address',
-            `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`,
-          )
+          form.setValue('address', data.logradouro || '')
+          form.setValue('neighborhood', data.bairro || '')
+          form.setValue('city', data.localidade || '')
+          form.setValue('state', data.uf || '')
           toast.success('Endereço preenchido automaticamente.')
         } else {
           toast.error('CEP não encontrado.')
@@ -384,12 +399,12 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
 
                 {/* ABA: Localização */}
                 <TabsContent value="location" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
                       name="zip_code"
                       render={({ field }) => (
-                        <FormItem className="col-span-2 sm:col-span-1">
+                        <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>CEP</FormLabel>
                           <div className="flex gap-2">
                             <FormControl>
@@ -417,14 +432,80 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                         </FormItem>
                       )}
                     />
+                    <div className="col-span-1 md:col-span-2 hidden md:block"></div>
                     <FormField
                       control={form.control}
                       name="address"
                       render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel>Endereço Completo</FormLabel>
+                        <FormItem className="col-span-1 md:col-span-3">
+                          <FormLabel>Logradouro</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Rua, Número, Bairro, Cidade - UF" />
+                            <Input {...field} placeholder="Rua, Avenida..." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="number"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-1">
+                          <FormLabel>Número</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="123" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="complement"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-2">
+                          <FormLabel>Complemento</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Sala 1, Bloco A" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="neighborhood"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-2">
+                          <FormLabel>Bairro</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Centro" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-3">
+                          <FormLabel>Cidade</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="São Paulo" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-1">
+                          <FormLabel>Estado (UF)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="SP" maxLength={2} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -434,7 +515,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       control={form.control}
                       name="phone"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>Telefone</FormLabel>
                           <FormControl>
                             <Input
@@ -451,7 +532,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       control={form.control}
                       name="whatsapp"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>WhatsApp</FormLabel>
                           <FormControl>
                             <Input

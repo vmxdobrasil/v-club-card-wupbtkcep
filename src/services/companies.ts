@@ -13,6 +13,11 @@ export type Company = {
 
   cnpj: string
   address?: string
+  number?: string
+  complement?: string
+  neighborhood?: string
+  city?: string
+  state?: string
   zip_code?: string
   phone?: string
   whatsapp?: string
