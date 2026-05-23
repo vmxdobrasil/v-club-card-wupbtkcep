@@ -18,7 +18,8 @@ export type Company = {
   neighborhood?: string
   city?: string
   state?: string
-  zip_code?: string
+  cep?: string
+  social_links?: any
   phone?: string
   whatsapp?: string
   is_headquarters: boolean

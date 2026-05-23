@@ -35,6 +35,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
+import { PartnerDragDropManager } from '@/components/master/PartnerDragDropManager'
 
 const volumeData = [
   { month: 'Jan', asaas: 1200000, others: 400000 },
@@ -276,6 +277,8 @@ export default function MasterDashboard() {
             </ChartContainer>
           </CardContent>
         </Card>
+
+        <PartnerDragDropManager />
 
         {/* Network Tree view */}
         <Card className="md:col-span-7">

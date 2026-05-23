@@ -45,7 +45,8 @@ const schema = z
     neighborhood: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
-    zip_code: z.string().optional(),
+    cep: z.string().optional(),
+    social_links: z.any().optional(),
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
     is_headquarters: z.boolean().default(false),
@@ -156,7 +157,8 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               neighborhood: company.neighborhood || '',
               city: company.city || '',
               state: company.state || '',
-              zip_code: company.zip_code || '',
+              cep: company.cep || '',
+              social_links: company.social_links || {},
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
               is_headquarters: company.is_headquarters ?? false,
@@ -180,7 +182,8 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               neighborhood: '',
               city: '',
               state: '',
-              zip_code: '',
+              cep: '',
+              social_links: {},
               phone: '',
               whatsapp: '',
               is_headquarters: false,
@@ -198,7 +201,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
   const isHeadquarters = form.watch('is_headquarters')
 
   const handleFetchAddress = async () => {
-    const cep = form.getValues('zip_code') || ''
+    const cep = form.getValues('cep') || ''
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length === 8) {
       setIsFetchingCep(true)
@@ -426,7 +429,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
-                      name="zip_code"
+                      name="cep"
                       render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-2">
                           <FormLabel>CEP</FormLabel>
@@ -434,6 +437,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                             <FormControl>
                               <Input
                                 {...field}
+                                value={field.value || ''}
                                 onChange={(e) => field.onChange(applyCepMask(e.target.value))}
                                 placeholder="00000-000"
                               />
@@ -569,6 +573,42 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  <div className="mt-6 border-t pt-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-4">
+                      Redes Sociais e Links
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="social_links.website"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Website</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value || ''}
+                                placeholder="https://..."
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="social_links.instagram"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Instagram</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ''} placeholder="@empresa" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 
