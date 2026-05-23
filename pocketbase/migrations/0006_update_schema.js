@@ -1,23 +1,31 @@
 migrate(
   (app) => {
     const col = app.findCollectionByNameOrId('companies')
-    col.fields.add(new TextField({ name: 'cnpj' }))
-    col.fields.add(new TextField({ name: 'zip_code' }))
-    col.fields.add(new TextField({ name: 'address' }))
-    col.fields.add(new TextField({ name: 'number' }))
-    col.fields.add(new TextField({ name: 'complement' }))
-    col.fields.add(new TextField({ name: 'neighborhood' }))
-    col.fields.add(new TextField({ name: 'city' }))
-    col.fields.add(new TextField({ name: 'state' }))
-    col.fields.add(new TextField({ name: 'phone' }))
-    col.fields.add(new TextField({ name: 'whatsapp' }))
-    col.fields.add(new BoolField({ name: 'is_headquarters' }))
-    col.fields.add(new TextField({ name: 'market_segment' }))
-
     const usersId = '_pb_users_auth_'
-    col.fields.add(new RelationField({ name: 'parent_id', collectionId: col.id, maxSelect: 1 }))
-    col.fields.add(new RelationField({ name: 'cobranded_id', collectionId: usersId, maxSelect: 1 }))
-    col.fields.add(new RelationField({ name: 'affiliate_id', collectionId: usersId, maxSelect: 1 }))
+
+    const fieldsToAdd = [
+      new TextField({ name: 'cnpj' }),
+      new TextField({ name: 'zip_code' }),
+      new TextField({ name: 'address' }),
+      new TextField({ name: 'number' }),
+      new TextField({ name: 'complement' }),
+      new TextField({ name: 'neighborhood' }),
+      new TextField({ name: 'city' }),
+      new TextField({ name: 'state' }),
+      new TextField({ name: 'phone' }),
+      new TextField({ name: 'whatsapp' }),
+      new BoolField({ name: 'is_headquarters' }),
+      new TextField({ name: 'market_segment' }),
+      new RelationField({ name: 'parent_id', collectionId: col.id, maxSelect: 1 }),
+      new RelationField({ name: 'cobranded_id', collectionId: usersId, maxSelect: 1 }),
+      new RelationField({ name: 'affiliate_id', collectionId: usersId, maxSelect: 1 }),
+    ]
+
+    fieldsToAdd.forEach((f) => {
+      if (!col.fields.getByName(f.name)) {
+        col.fields.add(f)
+      }
+    })
 
     app.save(col)
 
@@ -34,88 +42,100 @@ migrate(
     col.addIndex('idx_companies_cnpj', true, 'cnpj', "cnpj != ''")
     app.save(col)
 
-    const products = new Collection({
-      name: 'products',
-      type: 'base',
-      listRule: "@request.auth.id != ''",
-      viewRule: "@request.auth.id != ''",
-      createRule: "@request.auth.role = 'master' || @request.auth.role = 'partner'",
-      updateRule:
-        "@request.auth.role = 'master' || (@request.auth.role = 'partner' && partner_id = @request.auth.id)",
-      deleteRule:
-        "@request.auth.role = 'master' || (@request.auth.role = 'partner' && partner_id = @request.auth.id)",
-      fields: [
-        { name: 'name', type: 'text', required: true },
-        { name: 'description', type: 'text' },
-        { name: 'price', type: 'number', required: true },
-        { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
-        { name: 'partner_id', type: 'relation', collectionId: usersId, maxSelect: 1 },
-        {
-          name: 'image',
-          type: 'file',
-          maxSelect: 1,
-          mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-        },
-        { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-        { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-      ],
-    })
-    app.save(products)
+    try {
+      app.findCollectionByNameOrId('products')
+    } catch (_) {
+      const products = new Collection({
+        name: 'products',
+        type: 'base',
+        listRule: "@request.auth.id != ''",
+        viewRule: "@request.auth.id != ''",
+        createRule: "@request.auth.role = 'master' || @request.auth.role = 'partner'",
+        updateRule:
+          "@request.auth.role = 'master' || (@request.auth.role = 'partner' && partner_id = @request.auth.id)",
+        deleteRule:
+          "@request.auth.role = 'master' || (@request.auth.role = 'partner' && partner_id = @request.auth.id)",
+        fields: [
+          { name: 'name', type: 'text', required: true },
+          { name: 'description', type: 'text' },
+          { name: 'price', type: 'number', required: true },
+          { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
+          { name: 'partner_id', type: 'relation', collectionId: usersId, maxSelect: 1 },
+          {
+            name: 'image',
+            type: 'file',
+            maxSelect: 1,
+            mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          },
+          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+        ],
+      })
+      app.save(products)
+    }
 
-    const companyProducts = new Collection({
-      name: 'company_products',
-      type: 'base',
-      listRule: "@request.auth.id != ''",
-      viewRule: "@request.auth.id != ''",
-      createRule: "@request.auth.role = 'master'",
-      updateRule: "@request.auth.role = 'master'",
-      deleteRule: "@request.auth.role = 'master'",
-      fields: [
-        {
-          name: 'company_id',
-          type: 'relation',
-          collectionId: col.id,
-          required: true,
-          maxSelect: 1,
-        },
-        {
-          name: 'product_id',
-          type: 'relation',
-          collectionId: products.id,
-          required: true,
-          maxSelect: 1,
-        },
-        { name: 'custom_price', type: 'number' },
-        { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-        { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-      ],
-    })
-    app.save(companyProducts)
+    try {
+      app.findCollectionByNameOrId('company_products')
+    } catch (_) {
+      const companyProducts = new Collection({
+        name: 'company_products',
+        type: 'base',
+        listRule: "@request.auth.id != ''",
+        viewRule: "@request.auth.id != ''",
+        createRule: "@request.auth.role = 'master'",
+        updateRule: "@request.auth.role = 'master'",
+        deleteRule: "@request.auth.role = 'master'",
+        fields: [
+          {
+            name: 'company_id',
+            type: 'relation',
+            collectionId: col.id,
+            required: true,
+            maxSelect: 1,
+          },
+          {
+            name: 'product_id',
+            type: 'relation',
+            collectionId: app.findCollectionByNameOrId('products').id,
+            required: true,
+            maxSelect: 1,
+          },
+          { name: 'custom_price', type: 'number' },
+          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+        ],
+      })
+      app.save(companyProducts)
+    }
 
-    const binLogs = new Collection({
-      name: 'bin_logs',
-      type: 'base',
-      listRule: "@request.auth.role = 'master'",
-      viewRule: "@request.auth.role = 'master'",
-      createRule: '',
-      updateRule: '',
-      deleteRule: '',
-      fields: [
-        {
-          name: 'company_id',
-          type: 'relation',
-          collectionId: col.id,
-          required: true,
-          maxSelect: 1,
-        },
-        { name: 'old_bin', type: 'text' },
-        { name: 'new_bin', type: 'text' },
-        { name: 'changed_by', type: 'relation', collectionId: usersId, maxSelect: 1 },
-        { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-        { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-      ],
-    })
-    app.save(binLogs)
+    try {
+      app.findCollectionByNameOrId('bin_logs')
+    } catch (_) {
+      const binLogs = new Collection({
+        name: 'bin_logs',
+        type: 'base',
+        listRule: "@request.auth.role = 'master'",
+        viewRule: "@request.auth.role = 'master'",
+        createRule: null,
+        updateRule: null,
+        deleteRule: null,
+        fields: [
+          {
+            name: 'company_id',
+            type: 'relation',
+            collectionId: col.id,
+            required: true,
+            maxSelect: 1,
+          },
+          { name: 'old_bin', type: 'text' },
+          { name: 'new_bin', type: 'text' },
+          { name: 'changed_by', type: 'relation', collectionId: usersId, maxSelect: 1 },
+          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+        ],
+      })
+      app.save(binLogs)
+    }
   },
   (app) => {
     try {
