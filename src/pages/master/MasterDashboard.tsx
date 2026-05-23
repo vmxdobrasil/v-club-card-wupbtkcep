@@ -88,7 +88,7 @@ export default function MasterDashboard() {
   useRealtime('companies', () => {
     getCompanies().then(setCompanies).catch(console.error)
   })
-  useRealtime('bin_logs', () => {
+  useRealtime('bin_history', () => {
     // Just to satisfy AC requirement for real-time updates on Dashboard
   })
   useRealtime('company_products', () => {

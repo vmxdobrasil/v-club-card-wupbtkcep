@@ -127,7 +127,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       gateway_provider: 'Asaas',
       status: 'active',
       address: '',
-      zip_code: '',
+      cep: '',
       phone: '',
       whatsapp: '',
       is_headquarters: false,

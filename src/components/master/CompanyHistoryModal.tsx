@@ -58,7 +58,8 @@ export function CompanyHistoryModal({
                     {format(new Date(log.created), 'dd/MM/yyyy HH:mm')}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Por: {log.expand?.user_id?.name || log.expand?.user_id?.email || 'Sistema'}
+                    Por:{' '}
+                    {log.expand?.changed_by?.name || log.expand?.changed_by?.email || 'Sistema'}
                   </div>
                 </div>
                 <div className="space-y-1">
