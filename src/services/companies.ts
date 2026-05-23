@@ -33,12 +33,10 @@ export type Company = {
 }
 
 export const getCompanies = () =>
-  pb
-    .collection('companies')
-    .getFullList<Company>({
-      sort: '-created',
-      expand: 'owner_id,parent_company_id,cobranded_id,affiliate_id',
-    })
+  pb.collection('companies').getFullList<Company>({
+    sort: '-created',
+    expand: 'owner_id,parent_company_id,cobranded_id,affiliate_id',
+  })
 
 export const createCompany = (data: Partial<Company>) =>
   pb.collection('companies').create<Company>(data)
