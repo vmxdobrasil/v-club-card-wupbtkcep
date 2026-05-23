@@ -311,7 +311,7 @@ export default function MasterDashboard() {
             ) : (
               <Accordion type="multiple" className="w-full">
                 {filteredHeadquarters.map((hq) => {
-                  const myBranches = branches.filter((b) => b.parent_id === hq.id)
+                  const myBranches = branches.filter((b) => b.parent_company_id === hq.id)
                   return (
                     <AccordionItem key={hq.id} value={hq.id}>
                       <AccordionTrigger className="hover:no-underline">

@@ -58,8 +58,7 @@ export function CompanyHistoryModal({
                     {format(new Date(log.created), 'dd/MM/yyyy HH:mm')}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Por:{' '}
-                    {log.expand?.changed_by?.name || log.expand?.changed_by?.email || 'Sistema'}
+                    Por: {log.expand?.user_id?.name || log.expand?.user_id?.email || 'Sistema'}
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -68,14 +67,14 @@ export function CompanyHistoryModal({
                       <span className="font-medium text-foreground text-xs block mb-1">
                         BIN Anterior
                       </span>
-                      <span className="font-mono">{log.old_bin || 'N/A'}</span>
+                      <span className="font-mono">{log.old_prefix || 'N/A'}</span>
                     </div>
                     <span className="text-primary font-bold mx-2">→</span>
                     <div className="text-right">
                       <span className="font-medium text-foreground text-xs block mb-1">
                         Novo BIN
                       </span>
-                      <span className="font-mono">{log.new_bin}</span>
+                      <span className="font-mono">{log.new_prefix}</span>
                     </div>
                   </div>
                 </div>

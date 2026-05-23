@@ -84,7 +84,7 @@ export function CompanyCatalogManager({
       if (target === 'assigned') {
         if (propagate && company.is_headquarters) {
           const branches = await getCompanies()
-          const myBranches = branches.filter((b) => b.parent_id === company.id)
+          const myBranches = branches.filter((b) => b.parent_company_id === company.id)
           await Promise.all(
             [company.id, ...myBranches.map((b) => b.id)].map((cid) => saveCompanyProduct(cid, id)),
           )
@@ -95,7 +95,7 @@ export function CompanyCatalogManager({
       } else {
         if (propagate && company.is_headquarters) {
           const branches = await getCompanies()
-          const myBranches = branches.filter((b) => b.parent_id === company.id)
+          const myBranches = branches.filter((b) => b.parent_company_id === company.id)
           await Promise.all(
             [company.id, ...myBranches.map((b) => b.id)].map((cid) =>
               removeCompanyProduct(cid, id),

@@ -36,6 +36,7 @@ export default function MasterProductsPage() {
     price: '',
     status: 'active',
   })
+  const [file, setFile] = useState<File | null>(null)
 
   const load = () => {
     getProducts().then(setProducts).catch(console.error)
@@ -55,12 +56,12 @@ export default function MasterProductsPage() {
       return
     }
     setLoading(true)
-    const data = {
-      name: formData.name,
-      description: formData.description,
-      price: Number(formData.price),
-      status: formData.status,
-    }
+    const data = new FormData()
+    data.append('name', formData.name)
+    data.append('description', formData.description)
+    data.append('price', formData.price)
+    data.append('status', formData.status)
+    if (file) data.append('image', file)
 
     try {
       if (editing) await updateProduct(editing.id, data)
@@ -90,6 +91,7 @@ export default function MasterProductsPage() {
       price: p.price?.toString() || '0',
       status: p.status || 'active',
     })
+    setFile(null)
     setOpen(true)
   }
 
@@ -195,6 +197,14 @@ export default function MasterProductsPage() {
                   <SelectItem value="inactive">Inativo</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Imagem do Produto</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2">

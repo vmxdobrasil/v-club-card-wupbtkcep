@@ -49,14 +49,15 @@ const schema = z
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
     is_headquarters: z.boolean().default(false),
-    parent_id: z.string().optional(),
+    is_partner: z.boolean().default(false),
+    parent_company_id: z.string().optional(),
     market_segment: z.string().optional(),
     cobranded_id: z.string().optional(),
     affiliate_id: z.string().optional(),
   })
-  .refine((data) => data.is_headquarters || !!data.parent_id, {
+  .refine((data) => data.is_headquarters || !!data.parent_company_id, {
     message: 'Selecione a matriz para esta filial',
-    path: ['parent_id'],
+    path: ['parent_company_id'],
   })
 
 type FormValues = z.infer<typeof schema>
@@ -129,7 +130,8 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       phone: '',
       whatsapp: '',
       is_headquarters: false,
-      parent_id: '',
+      is_partner: false,
+      parent_company_id: '',
       market_segment: '',
       cobranded_id: '',
       affiliate_id: '',
@@ -158,7 +160,8 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
               is_headquarters: company.is_headquarters ?? false,
-              parent_id: company.parent_id || '',
+              is_partner: company.is_partner ?? false,
+              parent_company_id: company.parent_company_id || '',
               market_segment: company.market_segment || '',
               cobranded_id: company.cobranded_id || '',
               affiliate_id: company.affiliate_id || '',
@@ -181,7 +184,8 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               phone: '',
               whatsapp: '',
               is_headquarters: false,
-              parent_id: '',
+              is_partner: false,
+              parent_company_id: '',
               market_segment: '',
               cobranded_id: '',
               affiliate_id: '',
@@ -587,7 +591,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                               checked={field.value}
                               onCheckedChange={(val) => {
                                 field.onChange(val)
-                                if (val) form.setValue('parent_id', '')
+                                if (val) form.setValue('parent_company_id', '')
                               }}
                             />
                           </FormControl>
@@ -598,7 +602,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     {!isHeadquarters && (
                       <FormField
                         control={form.control}
-                        name="parent_id"
+                        name="parent_company_id"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
                             <FormLabel>Selecione a Matriz</FormLabel>
@@ -632,6 +636,23 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                 {/* ABA: Parcerias */}
                 <TabsContent value="partners" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="is_partner"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 col-span-2">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Empresa Parceira?</FormLabel>
+                            <div className="text-[0.8rem] text-muted-foreground">
+                              Designar esta empresa como uma Parceira de Negócios oficial.
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="cobranded_id"

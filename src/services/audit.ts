@@ -11,5 +11,5 @@ export const getBinLogs = (companyId: string) =>
   pb.collection('bin_logs').getFullList({
     filter: `company_id="${companyId}"`,
     sort: '-created',
-    expand: 'changed_by',
+    expand: 'user_id',
   })

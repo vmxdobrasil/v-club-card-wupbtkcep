@@ -10,9 +10,9 @@ onRecordAfterUpdateSuccess((e) => {
       const logsCol = $app.findCollectionByNameOrId('bin_logs')
       const log = new Record(logsCol)
       log.set('company_id', e.record.id)
-      log.set('old_bin', oldBin)
-      log.set('new_bin', newBin)
-      if (e.auth) log.set('changed_by', e.auth.id)
+      log.set('old_prefix', oldBin)
+      log.set('new_prefix', newBin)
+      if (e.auth) log.set('user_id', e.auth.id)
       $app.saveNoValidate(log)
     } catch (err) {
       $app.logger().error('Error saving bin log', 'error', err.message)
