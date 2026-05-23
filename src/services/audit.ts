@@ -15,3 +15,5 @@ export const getBinAuditLogs = (companyId?: string) => {
     expand: 'company_id,changed_by',
   })
 }
+
+export const getBinLogs = getBinAuditLogs
