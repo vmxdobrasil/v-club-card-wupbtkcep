@@ -62,7 +62,8 @@ export function CatalogBuilder() {
       await createCatalog({
         name: catalogName,
         company_id: selectedCompanyId,
-        items: assignedProducts.map((p) => ({ id: p.id, name: p.name, price: p.price })),
+        product_links: assignedProducts.map((p) => ({ id: p.id, name: p.name, price: p.price })),
+        status: 'active',
       })
       toast.success('Catálogo salvo com sucesso!')
       setAssignedProducts([])

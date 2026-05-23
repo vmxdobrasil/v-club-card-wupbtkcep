@@ -9,7 +9,7 @@ export const getCompanyLogs = (companyId: string) =>
 
 export const getBinAuditLogs = (companyId?: string) => {
   const filter = companyId ? `company_id="${companyId}"` : ''
-  return pb.collection('bin_audit_logs').getFullList({
+  return pb.collection('bin_history').getFullList({
     filter,
     sort: '-created',
     expand: 'company_id,changed_by',

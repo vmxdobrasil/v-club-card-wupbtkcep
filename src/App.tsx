@@ -18,6 +18,7 @@ import CompanyCatalogDetailsPage from './pages/company/CompanyCatalogDetailsPage
 import HolderDashboard from './pages/holder/HolderDashboard'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
 import PartnerProductsPage from './pages/partner/PartnerProductsPage'
+import PartnerCatalogsPage from './pages/partner/PartnerCatalogsPage'
 
 const App = () => (
   <AuthProvider>
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/holder" element={<HolderDashboard />} />
             <Route path="/partner" element={<PartnerDashboard />} />
             <Route path="/partner/products" element={<PartnerProductsPage />} />
+            <Route path="/partner/catalogs" element={<PartnerCatalogsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

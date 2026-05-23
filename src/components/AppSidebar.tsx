@@ -51,6 +51,7 @@ export function AppSidebar() {
       { title: 'Extrato e Repasses', url: '#', icon: PieChart },
       { title: 'Minha Loja', url: '#', icon: Store },
       { title: 'Produtos', url: '/partner/products', icon: Store },
+      { title: 'Catálogos', url: '/partner/catalogs', icon: Store },
     ],
   }
 

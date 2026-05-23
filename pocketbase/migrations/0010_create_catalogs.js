@@ -1,7 +1,8 @@
 migrate(
   (app) => {
+    const companiesId = app.findCollectionByNameOrId('companies').id
     const collection = new Collection({
-      name: 'products',
+      name: 'catalogs',
       type: 'base',
       listRule: "@request.auth.id != ''",
       viewRule: "@request.auth.id != ''",
@@ -11,15 +12,16 @@ migrate(
       fields: [
         { name: 'name', type: 'text', required: true },
         { name: 'description', type: 'text' },
-        { name: 'price', type: 'number', required: true },
+        { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
         {
-          name: 'image',
+          name: 'cover_image',
           type: 'file',
           maxSelect: 1,
           mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
         },
-        { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
+        { name: 'company_id', type: 'relation', collectionId: companiesId, maxSelect: 1 },
         { name: 'partner_id', type: 'relation', collectionId: '_pb_users_auth_', maxSelect: 1 },
+        { name: 'product_links', type: 'json' },
         { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
         { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
       ],
@@ -27,6 +29,6 @@ migrate(
     app.save(collection)
   },
   (app) => {
-    app.delete(app.findCollectionByNameOrId('products'))
+    app.delete(app.findCollectionByNameOrId('catalogs'))
   },
 )

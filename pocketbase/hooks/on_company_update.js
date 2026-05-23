@@ -26,10 +26,10 @@ onRecordAfterUpdateSuccess((e) => {
     }
   }
 
-  // Acceptance Criteria: BIN Traceability & Logs -> bin_audit_logs collection
+  // Acceptance Criteria: BIN Traceability & Logs -> bin_history collection
   if (oldBin !== newBin) {
     try {
-      const binAuditLogsCol = $app.findCollectionByNameOrId('bin_audit_logs')
+      const binAuditLogsCol = $app.findCollectionByNameOrId('bin_history')
       const binLog = new Record(binAuditLogsCol)
       binLog.set('company_id', e.record.id)
       binLog.set('old_prefix', oldBin)
