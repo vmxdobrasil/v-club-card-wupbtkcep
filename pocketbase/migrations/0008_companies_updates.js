@@ -2,20 +2,6 @@ migrate(
   (app) => {
     const col = app.findCollectionByNameOrId('companies')
 
-    // Remove empty/duplicate bin_prefix and cnpj to ensure unique indexes can be created
-    app
-      .db()
-      .newQuery(
-        `DELETE FROM companies WHERE id NOT IN (SELECT MIN(id) FROM companies GROUP BY bin_prefix) AND bin_prefix != ''`,
-      )
-      .execute()
-    app
-      .db()
-      .newQuery(
-        `DELETE FROM companies WHERE id NOT IN (SELECT MIN(id) FROM companies GROUP BY cnpj) AND cnpj != '' AND cnpj IS NOT NULL`,
-      )
-      .execute()
-
     // New text fields
     if (!col.fields.getByName('cnpj'))
       col.fields.add(new TextField({ name: 'cnpj', required: true }))
@@ -50,15 +36,32 @@ migrate(
       if (col.fields.getByName(f)) col.fields.removeByName(f)
     }
 
-    // Create unique indexes
+    // Save schema BEFORE running data deduplication so the new columns exist
+    app.save(col)
+
+    // Remove empty/duplicate bin_prefix and cnpj to ensure unique indexes can be created
+    app
+      .db()
+      .newQuery(
+        `DELETE FROM companies WHERE id NOT IN (SELECT MIN(id) FROM companies GROUP BY bin_prefix) AND bin_prefix != '' AND bin_prefix IS NOT NULL`,
+      )
+      .execute()
+    app
+      .db()
+      .newQuery(
+        `DELETE FROM companies WHERE id NOT IN (SELECT MIN(id) FROM companies GROUP BY cnpj) AND cnpj != '' AND cnpj IS NOT NULL`,
+      )
+      .execute()
+
+    // Re-fetch the collection to add indexes
+    const updatedCol = app.findCollectionByNameOrId('companies')
     try {
-      col.addIndex('idx_companies_cnpj', true, 'cnpj', "cnpj != ''")
-      col.addIndex('idx_companies_bin', true, 'bin_prefix', "bin_prefix != ''")
+      updatedCol.addIndex('idx_companies_cnpj', true, 'cnpj', "cnpj != ''")
+      updatedCol.addIndex('idx_companies_bin', true, 'bin_prefix', "bin_prefix != ''")
+      app.save(updatedCol)
     } catch (err) {
       console.log('Index creation bypassed:', err.message)
     }
-
-    app.save(col)
 
     // Products Collection
     try {
@@ -76,7 +79,13 @@ migrate(
           { name: 'name', type: 'text', required: true },
           { name: 'description', type: 'text' },
           { name: 'base_price', type: 'number' },
-          { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
+          {
+            name: 'status',
+            type: 'select',
+            values: ['active', 'inactive'],
+            required: true,
+            maxSelect: 1,
+          },
           { name: 'partner_id', type: 'relation', collectionId: '_pb_users_auth_', maxSelect: 1 },
           { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
           { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
