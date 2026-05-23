@@ -37,11 +37,13 @@ export function CompanyHistoryModal({
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" /> Histórico de BINs
+            <History className="w-5 h-5 text-primary" /> Histórico de Alterações de BIN
           </DialogTitle>
-          <DialogDescription>Log de auditoria das mudanças de BIN da empresa.</DialogDescription>
+          <DialogDescription>
+            Tabela com log de auditoria das mudanças de BIN da empresa.
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+        <div className="flex-1 overflow-y-auto pr-2">
           {loading ? (
             <div className="flex justify-center p-6">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -51,36 +53,36 @@ export function CompanyHistoryModal({
               Nenhum registro encontrado.
             </p>
           ) : (
-            logs.map((log) => (
-              <div key={log.id} className="border p-3 rounded-lg text-sm bg-card shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="font-bold text-primary">
-                    {format(new Date(log.created), 'dd/MM/yyyy HH:mm')}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Por:{' '}
-                    {log.expand?.changed_by?.name || log.expand?.changed_by?.email || 'Sistema'}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-xs bg-muted/50 p-2 rounded flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-foreground text-xs block mb-1">
-                        BIN Anterior
-                      </span>
-                      <span className="font-mono">{log.old_prefix || 'N/A'}</span>
-                    </div>
-                    <span className="text-primary font-bold mx-2">→</span>
-                    <div className="text-right">
-                      <span className="font-medium text-foreground text-xs block mb-1">
-                        Novo BIN
-                      </span>
-                      <span className="font-mono">{log.new_prefix}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-muted-foreground text-left">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Data</th>
+                    <th className="px-4 py-2 font-medium">Usuário</th>
+                    <th className="px-4 py-2 font-medium">BIN Anterior</th>
+                    <th className="px-4 py-2 font-medium">Novo BIN</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {format(new Date(log.created), 'dd/MM/yyyy HH:mm')}
+                      </td>
+                      <td className="px-4 py-2">
+                        {log.expand?.changed_by?.name || log.expand?.changed_by?.email || 'Sistema'}
+                      </td>
+                      <td className="px-4 py-2 font-mono text-muted-foreground">
+                        {log.old_prefix || 'N/A'}
+                      </td>
+                      <td className="px-4 py-2 font-mono font-medium text-primary">
+                        {log.new_prefix}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </DialogContent>

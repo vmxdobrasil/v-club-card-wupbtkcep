@@ -17,7 +17,6 @@ import {
   Pie,
   PieChart,
   Cell,
-  ResponsiveContainer,
 } from 'recharts'
 import { Building2, CreditCard, DollarSign, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
@@ -28,12 +27,6 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { CatalogBuilder } from '@/components/master/CatalogBuilder'
 import { BinHistoryTable } from '@/components/master/BinHistoryTable'
@@ -258,24 +251,22 @@ export default function MasterDashboard() {
           </CardHeader>
           <CardContent className="flex justify-center items-center h-[300px]">
             <ChartContainer config={{}} className="h-full w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                </PieChart>
-              </ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+              </PieChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -320,62 +311,86 @@ export default function MasterDashboard() {
                 Nenhuma matriz encontrada.
               </p>
             ) : (
-              <Accordion type="multiple" className="w-full">
+              <div className="space-y-4">
                 {filteredHeadquarters.map((hq) => {
                   const myBranches = branches.filter((b) => b.parent_company_id === hq.id)
                   return (
-                    <AccordionItem key={hq.id} value={hq.id}>
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex flex-col items-start gap-1 w-full text-left">
-                          <div className="flex items-center gap-3 w-full pr-4">
-                            <Building2 className="w-5 h-5 text-primary shrink-0" />
-                            <span className="font-semibold text-base">{hq.name}</span>
-                            <Badge variant="secondary" className="ml-auto shrink-0">
-                              {myBranches.length} filiais
+                    <Card key={hq.id} className="overflow-hidden border border-border shadow-sm">
+                      <div className="bg-muted/30 p-4 border-b">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-primary/10 rounded-md shrink-0">
+                              <Building2 className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-base">{hq.name}</h3>
+                              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                                {hq.cnpj && <span>CNPJ: {hq.cnpj}</span>}
+                                <span>BIN: {hq.bin_prefix}</span>
+                                <span>Gateway: {hq.gateway_provider}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={hq.status === 'active' ? 'default' : 'secondary'}
+                              className={
+                                hq.status === 'active'
+                                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                  : ''
+                              }
+                            >
+                              {hq.status === 'active' ? 'Ativo' : 'Inativo'}
+                            </Badge>
+                            <Badge variant="outline" className="bg-background">
+                              Matriz
                             </Badge>
                           </div>
-                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 ml-8 font-normal">
-                            {hq.cnpj && <span>CNPJ: {hq.cnpj}</span>}
-                            <span>BIN: {hq.bin_prefix}</span>
-                            <span>Gateway: {hq.gateway_provider}</span>
-                            <span>
-                              Status: <span className="capitalize">{hq.status}</span>
-                            </span>
-                          </div>
                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
+                      </div>
+
+                      <div className="p-4 bg-background">
+                        <h4 className="text-sm font-medium mb-3 text-muted-foreground flex items-center gap-2">
+                          Filiais Vinculadas ({myBranches.length})
+                        </h4>
+
                         {myBranches.length === 0 ? (
-                          <div className="ml-8 py-2 text-sm text-muted-foreground border-l-2 border-primary/20 pl-4">
-                            Sem filiais vinculadas.
+                          <div className="py-4 text-sm text-muted-foreground text-center border border-dashed rounded-md bg-muted/10">
+                            Sem filiais vinculadas no momento.
                           </div>
                         ) : (
-                          <div className="ml-8 space-y-2 border-l-2 border-primary/20 pl-4 py-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {myBranches.map((b) => (
                               <div
                                 key={b.id}
-                                className="flex justify-between items-center text-sm p-3 bg-muted/30 rounded-md hover:bg-muted/50 transition-colors"
+                                className="flex justify-between items-center text-sm p-3 border rounded-md hover:border-primary/50 transition-colors bg-card"
                               >
                                 <div>
                                   <span className="font-medium text-foreground">{b.name}</span>
                                   <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 mt-1">
                                     {b.cnpj && <span>CNPJ: {b.cnpj}</span>}
                                     <span>BIN: {b.bin_prefix}</span>
-                                    <span>Gateway: {b.gateway_provider}</span>
                                   </div>
                                 </div>
-                                <Badge variant={b.status === 'active' ? 'default' : 'secondary'}>
-                                  {b.status === 'active' ? 'Ativo' : 'Inativo'}
+                                <Badge
+                                  variant={b.status === 'active' ? 'outline' : 'secondary'}
+                                  className={
+                                    b.status === 'active'
+                                      ? 'border-emerald-500/30 text-emerald-600'
+                                      : ''
+                                  }
+                                >
+                                  {b.status === 'active' ? 'Ativa' : 'Inativa'}
                                 </Badge>
                               </div>
                             ))}
                           </div>
                         )}
-                      </AccordionContent>
-                    </AccordionItem>
+                      </div>
+                    </Card>
                   )
                 })}
-              </Accordion>
+              </div>
             )}
           </CardContent>
         </Card>

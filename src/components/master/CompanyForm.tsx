@@ -206,8 +206,8 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
   const parentOptions = companies.filter((c) => c.id !== company?.id && c.is_headquarters)
   const isHeadquarters = form.watch('is_headquarters')
 
-  const handleFetchAddress = async () => {
-    const cep = form.getValues('cep') || ''
+  const handleFetchAddress = async (cepValue?: string) => {
+    const cep = cepValue ?? (form.getValues('cep') || '')
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length === 8) {
       setIsFetchingCep(true)
@@ -447,10 +447,12 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                                 onChange={(e) => {
                                   const val = applyCepMask(e.target.value)
                                   field.onChange(val)
+                                  if (val.replace(/\D/g, '').length === 8) {
+                                    handleFetchAddress(val)
+                                  }
                                 }}
                                 onBlur={(e) => {
                                   field.onBlur()
-                                  handleFetchAddress()
                                 }}
                                 placeholder="00000-000"
                               />
