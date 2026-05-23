@@ -1,35 +1,41 @@
 migrate(
   (app) => {
     const col = app.findCollectionByNameOrId('companies')
+
+    if (!col.fields.getByName('cnpj')) col.fields.add(new TextField({ name: 'cnpj' }))
+    if (!col.fields.getByName('cep')) col.fields.add(new TextField({ name: 'cep' }))
+    if (!col.fields.getByName('address')) col.fields.add(new TextField({ name: 'address' }))
+    if (!col.fields.getByName('number')) col.fields.add(new TextField({ name: 'number' }))
+    if (!col.fields.getByName('complement')) col.fields.add(new TextField({ name: 'complement' }))
+    if (!col.fields.getByName('neighborhood'))
+      col.fields.add(new TextField({ name: 'neighborhood' }))
+    if (!col.fields.getByName('city')) col.fields.add(new TextField({ name: 'city' }))
+    if (!col.fields.getByName('state')) col.fields.add(new TextField({ name: 'state' }))
+    if (!col.fields.getByName('phone')) col.fields.add(new TextField({ name: 'phone' }))
+    if (!col.fields.getByName('whatsapp')) col.fields.add(new TextField({ name: 'whatsapp' }))
+    if (!col.fields.getByName('is_headquarters'))
+      col.fields.add(new BoolField({ name: 'is_headquarters' }))
+    if (!col.fields.getByName('market_segment'))
+      col.fields.add(new TextField({ name: 'market_segment' }))
+    if (!col.fields.getByName('social_links'))
+      col.fields.add(new JSONField({ name: 'social_links' }))
+
     const usersId = '_pb_users_auth_'
-
-    const fieldsToAdd = [
-      new TextField({ name: 'cnpj' }),
-      new TextField({ name: 'zip_code' }),
-      new TextField({ name: 'address' }),
-      new TextField({ name: 'number' }),
-      new TextField({ name: 'complement' }),
-      new TextField({ name: 'neighborhood' }),
-      new TextField({ name: 'city' }),
-      new TextField({ name: 'state' }),
-      new TextField({ name: 'phone' }),
-      new TextField({ name: 'whatsapp' }),
-      new BoolField({ name: 'is_headquarters' }),
-      new TextField({ name: 'market_segment' }),
-      new RelationField({ name: 'parent_id', collectionId: col.id, maxSelect: 1 }),
-      new RelationField({ name: 'cobranded_id', collectionId: usersId, maxSelect: 1 }),
-      new RelationField({ name: 'affiliate_id', collectionId: usersId, maxSelect: 1 }),
-    ]
-
-    fieldsToAdd.forEach((f) => {
-      if (!col.fields.getByName(f.name)) {
-        col.fields.add(f)
-      }
-    })
+    if (!col.fields.getByName('parent_company_id'))
+      col.fields.add(
+        new RelationField({ name: 'parent_company_id', collectionId: col.id, maxSelect: 1 }),
+      )
+    if (!col.fields.getByName('cobranded_id'))
+      col.fields.add(
+        new RelationField({ name: 'cobranded_id', collectionId: usersId, maxSelect: 1 }),
+      )
+    if (!col.fields.getByName('affiliate_id'))
+      col.fields.add(
+        new RelationField({ name: 'affiliate_id', collectionId: usersId, maxSelect: 1 }),
+      )
 
     app.save(col)
 
-    // De-duplicate if needed before index creation (though normally cnpj is empty on existing records)
     app
       .db()
       .newQuery(`
@@ -42,133 +48,65 @@ migrate(
     col.addIndex('idx_companies_cnpj', true, 'cnpj', "cnpj != ''")
     app.save(col)
 
-    try {
-      app.findCollectionByNameOrId('products')
-    } catch (_) {
-      const products = new Collection({
-        name: 'products',
-        type: 'base',
-        listRule: "@request.auth.id != ''",
-        viewRule: "@request.auth.id != ''",
-        createRule: "@request.auth.role = 'master' || @request.auth.role = 'partner'",
-        updateRule:
-          "@request.auth.role = 'master' || (@request.auth.role = 'partner' && partner_id = @request.auth.id)",
-        deleteRule:
-          "@request.auth.role = 'master' || (@request.auth.role = 'partner' && partner_id = @request.auth.id)",
-        fields: [
-          { name: 'name', type: 'text', required: true },
-          { name: 'description', type: 'text' },
-          { name: 'price', type: 'number', required: true },
-          { name: 'status', type: 'select', values: ['active', 'inactive'], required: true },
-          { name: 'partner_id', type: 'relation', collectionId: usersId, maxSelect: 1 },
-          {
-            name: 'image',
-            type: 'file',
-            maxSelect: 1,
-            mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-          },
-          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-        ],
-      })
-      app.save(products)
-    }
-
-    try {
-      app.findCollectionByNameOrId('company_products')
-    } catch (_) {
-      const companyProducts = new Collection({
-        name: 'company_products',
-        type: 'base',
-        listRule: "@request.auth.id != ''",
-        viewRule: "@request.auth.id != ''",
-        createRule: "@request.auth.role = 'master'",
-        updateRule: "@request.auth.role = 'master'",
-        deleteRule: "@request.auth.role = 'master'",
-        fields: [
-          {
-            name: 'company_id',
-            type: 'relation',
-            collectionId: col.id,
-            required: true,
-            maxSelect: 1,
-          },
-          {
-            name: 'product_id',
-            type: 'relation',
-            collectionId: app.findCollectionByNameOrId('products').id,
-            required: true,
-            maxSelect: 1,
-          },
-          { name: 'custom_price', type: 'number' },
-          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-        ],
-      })
-      app.save(companyProducts)
-    }
-
-    try {
-      app.findCollectionByNameOrId('bin_logs')
-    } catch (_) {
-      const binLogs = new Collection({
-        name: 'bin_logs',
-        type: 'base',
-        listRule: "@request.auth.role = 'master'",
-        viewRule: "@request.auth.role = 'master'",
-        createRule: null,
-        updateRule: null,
-        deleteRule: null,
-        fields: [
-          {
-            name: 'company_id',
-            type: 'relation',
-            collectionId: col.id,
-            required: true,
-            maxSelect: 1,
-          },
-          { name: 'old_bin', type: 'text' },
-          { name: 'new_bin', type: 'text' },
-          { name: 'changed_by', type: 'relation', collectionId: usersId, maxSelect: 1 },
-          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-        ],
-      })
-      app.save(binLogs)
-    }
+    const collection = new Collection({
+      name: 'bin_logs',
+      type: 'base',
+      listRule: "@request.auth.id != ''",
+      viewRule: "@request.auth.id != ''",
+      createRule: "@request.auth.id != ''",
+      updateRule: null,
+      deleteRule: null,
+      fields: [
+        {
+          name: 'company_id',
+          type: 'relation',
+          required: true,
+          collectionId: col.id,
+          cascadeDelete: true,
+          maxSelect: 1,
+        },
+        { name: 'old_prefix', type: 'text' },
+        { name: 'new_prefix', type: 'text' },
+        {
+          name: 'user_id',
+          type: 'relation',
+          collectionId: usersId,
+          maxSelect: 1,
+        },
+        { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+        { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+      ],
+    })
+    app.save(collection)
   },
   (app) => {
     try {
-      app.delete(app.findCollectionByNameOrId('bin_logs'))
-    } catch (e) {}
-    try {
-      app.delete(app.findCollectionByNameOrId('company_products'))
-    } catch (e) {}
-    try {
-      app.delete(app.findCollectionByNameOrId('products'))
-    } catch (e) {}
+      const collection = app.findCollectionByNameOrId('bin_logs')
+      app.delete(collection)
+    } catch (_) {}
 
-    try {
-      const col = app.findCollectionByNameOrId('companies')
-      ;[
-        'cnpj',
-        'zip_code',
-        'address',
-        'number',
-        'complement',
-        'neighborhood',
-        'city',
-        'state',
-        'phone',
-        'whatsapp',
-        'is_headquarters',
-        'market_segment',
-        'parent_id',
-        'cobranded_id',
-        'affiliate_id',
-      ].forEach((f) => col.fields.removeByName(f))
-      col.removeIndex('idx_companies_cnpj')
-      app.save(col)
-    } catch (e) {}
+    const col = app.findCollectionByNameOrId('companies')
+    ;[
+      'cnpj',
+      'cep',
+      'address',
+      'number',
+      'complement',
+      'neighborhood',
+      'city',
+      'state',
+      'phone',
+      'whatsapp',
+      'is_headquarters',
+      'market_segment',
+      'social_links',
+      'parent_company_id',
+      'cobranded_id',
+      'affiliate_id',
+    ].forEach((f) => {
+      if (col.fields.getByName(f)) col.fields.removeByName(f)
+    })
+    col.removeIndex('idx_companies_cnpj')
+    app.save(col)
   },
 )
