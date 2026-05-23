@@ -75,8 +75,7 @@ export default function MasterDashboard() {
         setCardHolders(holders)
         setTransactions(txs)
       })
-      .catch((err) => {
-        console.error(err)
+      .catch(() => {
         setError('Não foi possível carregar os dados. Verifique sua conexão ou permissões.')
       })
       .finally(() => setLoading(false))
@@ -87,7 +86,15 @@ export default function MasterDashboard() {
   }, [loadData])
 
   useRealtime('companies', () => {
-    getCompanies().then(setCompanies).catch(console.error)
+    getCompanies()
+      .then(setCompanies)
+      .catch(() => {})
+  })
+
+  useRealtime('transactions', () => {
+    getTransactions()
+      .then(setTransactions)
+      .catch(() => {})
   })
 
   if (authLoading || loading)
@@ -319,33 +326,43 @@ export default function MasterDashboard() {
                   return (
                     <AccordionItem key={hq.id} value={hq.id}>
                       <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <Building2 className="w-4 h-4 text-primary" />
-                          <span className="font-semibold">{hq.name}</span>
-                          <Badge variant="secondary" className="ml-2">
-                            {myBranches.length} filiais
-                          </Badge>
+                        <div className="flex flex-col items-start gap-1 w-full text-left">
+                          <div className="flex items-center gap-3 w-full pr-4">
+                            <Building2 className="w-5 h-5 text-primary shrink-0" />
+                            <span className="font-semibold text-base">{hq.name}</span>
+                            <Badge variant="secondary" className="ml-auto shrink-0">
+                              {myBranches.length} filiais
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 ml-8 font-normal">
+                            {hq.cnpj && <span>CNPJ: {hq.cnpj}</span>}
+                            <span>BIN: {hq.bin_prefix}</span>
+                            <span>Gateway: {hq.gateway_provider}</span>
+                            <span>
+                              Status: <span className="capitalize">{hq.status}</span>
+                            </span>
+                          </div>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
                         {myBranches.length === 0 ? (
-                          <div className="ml-6 py-2 text-sm text-muted-foreground border-l-2 border-primary/20 pl-4">
+                          <div className="ml-8 py-2 text-sm text-muted-foreground border-l-2 border-primary/20 pl-4">
                             Sem filiais vinculadas.
                           </div>
                         ) : (
-                          <div className="ml-6 space-y-2 border-l-2 border-primary/20 pl-4 py-2">
+                          <div className="ml-8 space-y-2 border-l-2 border-primary/20 pl-4 py-2">
                             {myBranches.map((b) => (
                               <div
                                 key={b.id}
-                                className="flex justify-between items-center text-sm p-3 bg-muted/30 rounded-md"
+                                className="flex justify-between items-center text-sm p-3 bg-muted/30 rounded-md hover:bg-muted/50 transition-colors"
                               >
                                 <div>
-                                  <span className="font-medium">{b.name}</span>
-                                  {b.cnpj && (
-                                    <span className="text-muted-foreground ml-2">
-                                      CNPJ: {b.cnpj}
-                                    </span>
-                                  )}
+                                  <span className="font-medium text-foreground">{b.name}</span>
+                                  <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                                    {b.cnpj && <span>CNPJ: {b.cnpj}</span>}
+                                    <span>BIN: {b.bin_prefix}</span>
+                                    <span>Gateway: {b.gateway_provider}</span>
+                                  </div>
                                 </div>
                                 <Badge variant={b.status === 'active' ? 'default' : 'secondary'}>
                                   {b.status === 'active' ? 'Ativo' : 'Inativo'}

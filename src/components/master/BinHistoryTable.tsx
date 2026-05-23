@@ -30,18 +30,20 @@ export function BinHistoryTable() {
   const loadLogs = () => {
     getBinAuditLogs(selectedCompany !== 'all' ? selectedCompany : undefined)
       .then((data) => setLogs(data))
-      .catch(console.error)
+      .catch(() => {})
   }
 
   useEffect(() => {
-    getCompanies().then(setCompanies).catch(console.error)
+    getCompanies()
+      .then(setCompanies)
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
     loadLogs()
   }, [selectedCompany])
 
-  useRealtime('bin_prefix_history', () => {
+  useRealtime('bin_logs', () => {
     loadLogs()
   })
 

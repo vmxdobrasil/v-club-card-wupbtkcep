@@ -112,7 +112,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       pb.collection('users')
         .getFullList({ filter: "role='partner'" })
         .then(setPartners)
-        .catch(console.error)
+        .catch(() => {})
     }
   }, [open])
 

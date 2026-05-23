@@ -27,7 +27,7 @@ export function CompanyHistoryModal({
       setLoading(true)
       getBinLogs(companyId)
         .then(setLogs)
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setLoading(false))
     }
   }, [open, companyId])

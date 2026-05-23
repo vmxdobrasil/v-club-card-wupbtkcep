@@ -22,8 +22,7 @@ export default function MasterCompaniesPage({
     setLoading(true)
     getCompanies()
       .then(setCompanies)
-      .catch((err) => {
-        console.error(err)
+      .catch(() => {
         setError('Não foi possível carregar as empresas. Verifique sua conexão ou permissões.')
       })
       .finally(() => setLoading(false))
@@ -34,7 +33,9 @@ export default function MasterCompaniesPage({
   }, [loadData])
 
   useRealtime('companies', () => {
-    getCompanies().then(setCompanies).catch(console.error)
+    getCompanies()
+      .then(setCompanies)
+      .catch(() => {})
   })
 
   if (authLoading || loading) {
