@@ -28,6 +28,13 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Badge } from '@/components/ui/badge'
 
 const volumeData = [
   { month: 'Jan', asaas: 1200000, others: 400000 },
@@ -118,6 +125,9 @@ export default function MasterDashboard() {
 
   const totalVolume = transactions.reduce((acc, t) => acc + (t.type === 'debit' ? t.amount : 0), 0)
   const totalCommission = transactions.reduce((acc, t) => acc + (t.split_data?.commission || 0), 0)
+
+  const headquarters = companies.filter((c) => c.is_headquarters)
+  const branches = companies.filter((c) => !c.is_headquarters)
 
   return (
     <div className="space-y-6">
@@ -252,6 +262,70 @@ export default function MasterDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Network Tree view */}
+        <Card className="md:col-span-7">
+          <CardHeader>
+            <CardTitle>Árvore da Rede Corporativa</CardTitle>
+            <CardDescription>
+              Hierarquia de sedes (matrizes) e suas filiais associadas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {headquarters.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nenhuma matriz cadastrada na plataforma.
+              </p>
+            ) : (
+              <Accordion type="multiple" className="w-full">
+                {headquarters.map((hq) => {
+                  const myBranches = branches.filter((b) => b.parent_company_id === hq.id)
+                  return (
+                    <AccordionItem key={hq.id} value={hq.id}>
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <Building2 className="w-4 h-4 text-primary" />
+                          <span className="font-semibold">{hq.name}</span>
+                          <Badge variant="secondary" className="ml-2">
+                            {myBranches.length} filiais
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {myBranches.length === 0 ? (
+                          <div className="ml-6 py-2 text-sm text-muted-foreground border-l-2 border-primary/20 pl-4">
+                            Sem filiais vinculadas.
+                          </div>
+                        ) : (
+                          <div className="ml-6 space-y-2 border-l-2 border-primary/20 pl-4 py-2">
+                            {myBranches.map((b) => (
+                              <div
+                                key={b.id}
+                                className="flex justify-between items-center text-sm p-3 bg-muted/30 rounded-md"
+                              >
+                                <div>
+                                  <span className="font-medium">{b.name}</span>
+                                  {b.cnpj && (
+                                    <span className="text-muted-foreground ml-2">
+                                      CNPJ: {b.cnpj}
+                                    </span>
+                                  )}
+                                </div>
+                                <Badge variant={b.status === 'active' ? 'default' : 'secondary'}>
+                                  {b.status === 'active' ? 'Ativo' : 'Inativo'}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
+            )}
           </CardContent>
         </Card>
       </div>

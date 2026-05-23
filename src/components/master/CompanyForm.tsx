@@ -22,12 +22,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createCompany, updateCompany, type Company } from '@/services/companies'
 import { toast } from 'sonner'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
-import { useAuth } from '@/hooks/use-auth'
 
 const schema = z
   .object({
@@ -42,15 +42,15 @@ const schema = z
     zip_code: z.string().optional(),
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
-    is_matrix: z.boolean().default(true),
-    matrix_id: z.string().optional(),
+    is_headquarters: z.boolean().default(false),
+    parent_company_id: z.string().optional(),
     market_segment: z.string().optional(),
-    co_manager_id: z.string().optional(),
-    partner_id: z.string().optional(),
+    cobranded_id: z.string().optional(),
+    affiliate_id: z.string().optional(),
   })
-  .refine((data) => data.is_matrix || !!data.matrix_id, {
+  .refine((data) => data.is_headquarters || !!data.parent_company_id, {
     message: 'Selecione a matriz para esta filial',
-    path: ['matrix_id'],
+    path: ['parent_company_id'],
   })
 
 type FormValues = z.infer<typeof schema>
@@ -95,8 +95,8 @@ const applyPhoneMask = (val: string) => {
 }
 
 export function CompanyForm({ open, onOpenChange, company, companies, onSuccess }: Props) {
-  const { user } = useAuth()
   const [partners, setPartners] = useState<any[]>([])
+  const [isFetchingCep, setIsFetchingCep] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -121,11 +121,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       zip_code: '',
       phone: '',
       whatsapp: '',
-      is_matrix: true,
-      matrix_id: '',
+      is_headquarters: false,
+      parent_company_id: '',
       market_segment: '',
-      co_manager_id: '',
-      partner_id: '',
+      cobranded_id: '',
+      affiliate_id: '',
     },
   })
 
@@ -145,11 +145,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               zip_code: company.zip_code || '',
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
-              is_matrix: company.is_matrix ?? true,
-              matrix_id: company.matrix_id || '',
+              is_headquarters: company.is_headquarters ?? false,
+              parent_company_id: company.parent_company_id || '',
               market_segment: company.market_segment || '',
-              co_manager_id: company.co_manager_id || '',
-              partner_id: company.partner_id || '',
+              cobranded_id: company.cobranded_id || '',
+              affiliate_id: company.affiliate_id || '',
             }
           : {
               name: '',
@@ -163,22 +163,24 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               zip_code: '',
               phone: '',
               whatsapp: '',
-              is_matrix: true,
-              matrix_id: '',
+              is_headquarters: false,
+              parent_company_id: '',
               market_segment: '',
-              co_manager_id: '',
-              partner_id: '',
+              cobranded_id: '',
+              affiliate_id: '',
             },
       )
     }
   }, [open, company, form])
 
-  const parentOptions = companies.filter((c) => c.id !== company?.id && c.is_matrix)
-  const isMatrix = form.watch('is_matrix')
+  const parentOptions = companies.filter((c) => c.id !== company?.id && c.is_headquarters)
+  const isHeadquarters = form.watch('is_headquarters')
 
-  const fetchAddress = async (cep: string) => {
+  const handleFetchAddress = async () => {
+    const cep = form.getValues('zip_code') || ''
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length === 8) {
+      setIsFetchingCep(true)
       try {
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const data = await res.json()
@@ -187,30 +189,24 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
             'address',
             `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`,
           )
+          toast.success('Endereço preenchido automaticamente.')
+        } else {
+          toast.error('CEP não encontrado.')
         }
       } catch (err) {
-        console.error('Error fetching CEP', err)
+        toast.error('Erro ao buscar CEP.')
+      } finally {
+        setIsFetchingCep(false)
       }
+    } else {
+      toast.error('Preencha um CEP válido.')
     }
   }
 
   const onSubmit = async (data: FormValues) => {
     try {
-      let change_log = company?.change_log || []
-      if (company && data.bin_prefix !== company.bin_prefix) {
-        const entry = {
-          date: new Date().toISOString(),
-          old_bin: company.bin_prefix,
-          new_bin: data.bin_prefix,
-          user: user?.id,
-        }
-        change_log = [...(Array.isArray(change_log) ? change_log : []), entry]
-      }
-
-      const payload = { ...data, change_log }
-
-      if (company) await updateCompany(company.id, payload)
-      else await createCompany(payload)
+      if (company) await updateCompany(company.id, data)
+      else await createCompany(data)
 
       toast.success(company ? 'Empresa atualizada com sucesso' : 'Empresa criada com sucesso')
       onSuccess()
@@ -221,7 +217,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
           form.setError(field as any, { message: msg }),
         )
       } else {
-        toast.error('Ocorreu um erro ao salvar a empresa.')
+        toast.error('Ocorreu um erro ao salvar a empresa. Verifique se o CNPJ ou BIN já existem.')
       }
     }
   }
@@ -238,16 +234,22 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
             className="space-y-4 flex-1 overflow-hidden flex flex-col"
           >
             <ScrollArea className="flex-1 pr-4 -mr-4">
-              <div className="space-y-6 pb-4">
-                {/* Dados Principais */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium leading-none">Dados Principais</h3>
+              <Tabs defaultValue="general" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-4">
+                  <TabsTrigger value="general">Geral</TabsTrigger>
+                  <TabsTrigger value="location">Localização</TabsTrigger>
+                  <TabsTrigger value="hierarchy">Hierarquia</TabsTrigger>
+                  <TabsTrigger value="partners">Parcerias</TabsTrigger>
+                </TabsList>
+
+                {/* ABA: Geral */}
+                <TabsContent value="general" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="name"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-2 sm:col-span-1">
                           <FormLabel>Nome da Empresa / Razão Social</FormLabel>
                           <FormControl>
                             <Input {...field} />
@@ -260,7 +262,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       control={form.control}
                       name="cnpj"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-2 sm:col-span-1">
                           <FormLabel>CNPJ</FormLabel>
                           <FormControl>
                             <Input
@@ -364,74 +366,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                         </FormItem>
                       )}
                     />
-                  </div>
-                </div>
-
-                {/* Hierarquia e Segmento */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium leading-none">Hierarquia e Segmento</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="is_matrix"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 col-span-2 sm:col-span-1">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">É matriz?</FormLabel>
-                            <div className="text-[0.8rem] text-muted-foreground">
-                              Desmarque se esta empresa for uma filial.
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={(val) => {
-                                field.onChange(val)
-                                if (val) form.setValue('matrix_id', '')
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {!isMatrix && (
-                      <FormField
-                        control={form.control}
-                        name="matrix_id"
-                        render={({ field }) => (
-                          <FormItem className="col-span-2 sm:col-span-1">
-                            <FormLabel>Selecione a Matriz</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione a empresa matriz" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {parentOptions.map((opt) => (
-                                  <SelectItem key={opt.id} value={opt.id}>
-                                    {opt.name}
-                                  </SelectItem>
-                                ))}
-                                {parentOptions.length === 0 && (
-                                  <SelectItem value="none" disabled>
-                                    Nenhuma matriz disponível
-                                  </SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
                     <FormField
                       control={form.control}
                       name="market_segment"
                       render={({ field }) => (
-                        <FormItem className="col-span-2">
+                        <FormItem>
                           <FormLabel>Segmento de Mercado</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Ex: Varejo, Alimentação" />
@@ -440,90 +379,40 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                         </FormItem>
                       )}
                     />
-
-                    <FormField
-                      control={form.control}
-                      name="co_manager_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Co-gestor (Cobranded)</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {partners.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.name || p.email}
-                                </SelectItem>
-                              ))}
-                              {partners.length === 0 && (
-                                <SelectItem value="none" disabled>
-                                  Nenhum parceiro
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="partner_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Parceira / Afiliada</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {partners.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.name || p.email}
-                                </SelectItem>
-                              ))}
-                              {partners.length === 0 && (
-                                <SelectItem value="none" disabled>
-                                  Nenhum parceiro
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
-                </div>
+                </TabsContent>
 
-                {/* Contato e Endereço */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium leading-none">Contato e Endereço</h3>
+                {/* ABA: Localização */}
+                <TabsContent value="location" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="zip_code"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-2 sm:col-span-1">
                           <FormLabel>CEP</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              onChange={(e) => {
-                                const val = applyCepMask(e.target.value)
-                                field.onChange(val)
-                                fetchAddress(val)
-                              }}
-                              placeholder="00000-000"
-                            />
-                          </FormControl>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input
+                                {...field}
+                                onChange={(e) => field.onChange(applyCepMask(e.target.value))}
+                                placeholder="00000-000"
+                              />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={handleFetchAddress}
+                              disabled={isFetchingCep}
+                            >
+                              {isFetchingCep ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Search className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -532,7 +421,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       control={form.control}
                       name="address"
                       render={({ field }) => (
-                        <FormItem className="col-span-2 sm:col-span-1">
+                        <FormItem className="col-span-2">
                           <FormLabel>Endereço Completo</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Rua, Número, Bairro, Cidade - UF" />
@@ -576,8 +465,125 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       )}
                     />
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+
+                {/* ABA: Hierarquia */}
+                <TabsContent value="hierarchy" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="is_headquarters"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 col-span-2">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">É Matriz (Sede)?</FormLabel>
+                            <div className="text-[0.8rem] text-muted-foreground">
+                              Marque se esta empresa opera como sede da rede.
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={(val) => {
+                                field.onChange(val)
+                                if (val) form.setValue('parent_company_id', '')
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {!isHeadquarters && (
+                      <FormField
+                        control={form.control}
+                        name="parent_company_id"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Selecione a Matriz</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione a empresa matriz" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {parentOptions.map((opt) => (
+                                  <SelectItem key={opt.id} value={opt.id}>
+                                    {opt.name}
+                                  </SelectItem>
+                                ))}
+                                {parentOptions.length === 0 && (
+                                  <SelectItem value="none" disabled>
+                                    Nenhuma matriz disponível
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* ABA: Parcerias */}
+                <TabsContent value="partners" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="cobranded_id"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2 sm:col-span-1">
+                          <FormLabel>Co-gestora (Cobranded)</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {partners.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name || p.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="affiliate_id"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2 sm:col-span-1">
+                          <FormLabel>Parceira / Afiliada</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {partners.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name || p.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
             </ScrollArea>
             <div className="flex justify-end gap-2 pt-4 border-t mt-auto">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

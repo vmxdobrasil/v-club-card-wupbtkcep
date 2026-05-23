@@ -11,25 +11,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit2, Trash2, Building2, CreditCard, BookOpen } from 'lucide-react'
+import { Plus, Edit2, Trash2, Building2, CreditCard, BookOpen, History } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import { CompanyForm } from './CompanyForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import {
-  getProducts,
-  getCompanyProducts,
-  saveCompanyProduct,
-  removeCompanyProduct,
-} from '@/services/catalog'
-import { Switch } from '@/components/ui/switch'
+import { CompanyCatalogManager } from './CompanyCatalogManager'
+import { CompanyHistoryModal } from './CompanyHistoryModal'
 
 export function CompanyManagement({
   companies,
@@ -40,13 +28,15 @@ export function CompanyManagement({
 }) {
   const { user } = useAuth()
   const isMaster = user?.role === 'master'
+
   const [formOpen, setFormOpen] = useState(false)
   const [editingCompany, setEditingCompany] = useState<Company | undefined>()
+
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [catalogCompany, setCatalogCompany] = useState<Company | null>(null)
-  const [allProducts, setAllProducts] = useState<any[]>([])
-  const [companyProducts, setCompanyProducts] = useState<any[]>([])
-  const [loadingCatalog, setLoadingCatalog] = useState(false)
+
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyCompanyId, setHistoryCompanyId] = useState<string | null>(null)
 
   const handleCreate = () => {
     setEditingCompany(undefined)
@@ -69,37 +59,14 @@ export function CompanyManagement({
     }
   }
 
-  const handleManageCatalog = async (company: Company) => {
+  const handleManageCatalog = (company: Company) => {
     setCatalogCompany(company)
-    setLoadingCatalog(true)
     setCatalogOpen(true)
-    try {
-      const [prods, compProds] = await Promise.all([getProducts(), getCompanyProducts(company.id)])
-      setAllProducts(prods.filter((p) => p.status === 'active'))
-      setCompanyProducts(compProds)
-    } catch (error) {
-      toast.error('Erro ao carregar catálogo.')
-    } finally {
-      setLoadingCatalog(false)
-    }
   }
 
-  const toggleProduct = async (productId: string, checked: boolean) => {
-    if (!catalogCompany) return
-    try {
-      if (checked) {
-        await saveCompanyProduct(catalogCompany.id, productId)
-        const compProds = await getCompanyProducts(catalogCompany.id)
-        setCompanyProducts(compProds)
-        toast.success('Produto adicionado ao catálogo')
-      } else {
-        await removeCompanyProduct(catalogCompany.id, productId)
-        setCompanyProducts((prev) => prev.filter((cp) => cp.product_id !== productId))
-        toast.success('Produto removido do catálogo')
-      }
-    } catch (error) {
-      toast.error('Erro ao atualizar produto no catálogo.')
-    }
+  const handleViewHistory = (company: Company) => {
+    setHistoryCompanyId(company.id)
+    setHistoryOpen(true)
   }
 
   return (
@@ -133,7 +100,7 @@ export function CompanyManagement({
                   <div className="space-y-1">
                     <p className="font-medium text-foreground">Nenhuma empresa encontrada</p>
                     <p className="text-sm text-muted-foreground">
-                      Cadastre a primeira empresa para iniciar a operação e alocar BINs.
+                      Cadastre a primeira empresa para iniciar a operação.
                     </p>
                   </div>
                   {isMaster && (
@@ -165,7 +132,7 @@ export function CompanyManagement({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-mono text-sm">{company.cnpj}</div>
+                          <div className="font-mono text-sm">{company.cnpj || '-'}</div>
                           {(company.phone || company.whatsapp) && (
                             <div className="text-xs text-muted-foreground">
                               {company.whatsapp || company.phone}
@@ -175,16 +142,18 @@ export function CompanyManagement({
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={company.is_matrix ? 'border-primary/50 text-primary' : ''}
+                            className={
+                              company.is_headquarters ? 'border-primary/50 text-primary' : ''
+                            }
                           >
-                            {company.is_matrix ? 'Matriz' : 'Filial'}
+                            {company.is_headquarters ? 'Matriz' : 'Filial'}
                           </Badge>
-                          {!company.is_matrix && company.expand?.matrix_id && (
+                          {!company.is_headquarters && company.expand?.parent_company_id && (
                             <div
                               className="text-xs text-muted-foreground mt-1 truncate max-w-[150px]"
-                              title={company.expand.matrix_id.name}
+                              title={company.expand.parent_company_id.name}
                             >
-                              De: {company.expand.matrix_id.name}
+                              De: {company.expand.parent_company_id.name}
                             </div>
                           )}
                         </TableCell>
@@ -212,7 +181,15 @@ export function CompanyManagement({
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Gerenciar Catálogo"
+                              title="Histórico"
+                              onClick={() => handleViewHistory(company)}
+                            >
+                              <History className="w-4 h-4 text-amber-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Catálogo"
                               onClick={() => handleManageCatalog(company)}
                             >
                               <BookOpen className="w-4 h-4 text-blue-500" />
@@ -224,7 +201,7 @@ export function CompanyManagement({
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDelete(company.id)}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              className="text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -252,9 +229,6 @@ export function CompanyManagement({
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3 border border-dashed rounded-lg">
                   <CreditCard className="w-10 h-10 text-muted-foreground" />
                   <p className="font-medium text-foreground">Nenhum BIN alocado</p>
-                  <p className="text-sm text-muted-foreground">
-                    Os BINs aparecerão aqui assim que as empresas forem cadastradas.
-                  </p>
                 </div>
               ) : (
                 <Table>
@@ -286,52 +260,16 @@ export function CompanyManagement({
         companies={companies}
         onSuccess={() => setFormOpen(false)}
       />
-
-      <Dialog open={catalogOpen} onOpenChange={setCatalogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Catálogo de Produtos</DialogTitle>
-            <DialogDescription>
-              Gerencie quais produtos estão disponíveis para {catalogCompany?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4">
-            {loadingCatalog ? (
-              <div className="text-center py-10 text-muted-foreground">Carregando...</div>
-            ) : allProducts.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                Nenhum produto ativo encontrado no sistema.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {allProducts.map((product) => {
-                  const isChecked = companyProducts.some((cp) => cp.product_id === product.id)
-                  return (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="space-y-1">
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          R$ {product.base_price?.toFixed(2) || '0.00'}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={isChecked}
-                        onCheckedChange={(c) => toggleProduct(product.id, c)}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => setCatalogOpen(false)}>Fechar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CompanyCatalogManager
+        company={catalogCompany}
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+      />
+      <CompanyHistoryModal
+        companyId={historyCompanyId}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+      />
     </div>
   )
 }
