@@ -33,7 +33,7 @@ export default function MasterProductsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    base_price: '',
+    price: '',
     status: 'active',
   })
 
@@ -50,7 +50,7 @@ export default function MasterProductsPage() {
   })
 
   const handleSave = async () => {
-    if (!formData.name || !formData.base_price) {
+    if (!formData.name || !formData.price) {
       toast.error('Preencha os campos obrigatórios')
       return
     }
@@ -58,7 +58,7 @@ export default function MasterProductsPage() {
     const data = {
       name: formData.name,
       description: formData.description,
-      base_price: Number(formData.base_price),
+      price: Number(formData.price),
       status: formData.status,
     }
 
@@ -87,7 +87,7 @@ export default function MasterProductsPage() {
     setFormData({
       name: p.name,
       description: p.description || '',
-      base_price: p.base_price?.toString() || '0',
+      price: p.price?.toString() || '0',
       status: p.status || 'active',
     })
     setOpen(true)
@@ -103,7 +103,7 @@ export default function MasterProductsPage() {
             setFormData({
               name: '',
               description: '',
-              base_price: '',
+              price: '',
               status: 'active',
             })
             setOpen(true)
@@ -126,7 +126,7 @@ export default function MasterProductsPage() {
           {products.map((p) => (
             <TableRow key={p.id}>
               <TableCell className="font-medium">{p.name}</TableCell>
-              <TableCell>R$ {p.base_price?.toFixed(2) || '0.00'}</TableCell>
+              <TableCell>R$ {p.price?.toFixed(2) || '0.00'}</TableCell>
               <TableCell>
                 <Badge variant={p.status === 'active' ? 'default' : 'secondary'}>
                   {p.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -177,8 +177,8 @@ export default function MasterProductsPage() {
               <Input
                 type="number"
                 step="0.01"
-                value={formData.base_price}
-                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               />
             </div>
             <div className="space-y-2">

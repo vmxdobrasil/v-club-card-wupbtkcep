@@ -10,7 +10,7 @@ onRecordAfterUpdateSuccess((e) => {
       const logsCol = $app.findCollectionByNameOrId('bin_logs')
       const log = new Record(logsCol)
       log.set('company_id', e.record.id)
-      log.set('previous_bin', oldBin)
+      log.set('old_bin', oldBin)
       log.set('new_bin', newBin)
       if (e.auth) log.set('changed_by', e.auth.id)
       $app.saveNoValidate(log)

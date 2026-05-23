@@ -27,9 +27,8 @@ export default function PartnerProductsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    original_price: '',
-    promo_price: '',
-    active: true,
+    price: '',
+    status: 'active',
   })
   const [file, setFile] = useState<File | null>(null)
 
@@ -41,21 +40,16 @@ export default function PartnerProductsPage() {
   }, [user])
 
   const handleSave = async () => {
-    if (!formData.name || !formData.original_price || !formData.promo_price) {
+    if (!formData.name || !formData.price) {
       toast.error('Preencha os campos obrigatórios')
-      return
-    }
-    if (Number(formData.promo_price) > Number(formData.original_price)) {
-      toast.error('Preço promocional não pode ser maior que o original')
       return
     }
     setLoading(true)
     const data = new FormData()
     data.append('name', formData.name)
     data.append('description', formData.description)
-    data.append('original_price', formData.original_price)
-    data.append('promo_price', formData.promo_price)
-    data.append('active', String(formData.active))
+    data.append('price', formData.price)
+    data.append('status', formData.status)
     data.append('partner_id', user.id)
     if (file) data.append('image', file)
 
@@ -83,10 +77,9 @@ export default function PartnerProductsPage() {
     setEditing(p)
     setFormData({
       name: p.name,
-      description: p.description,
-      original_price: p.original_price,
-      promo_price: p.promo_price,
-      active: p.active,
+      description: p.description || '',
+      price: p.price?.toString() || '',
+      status: p.status || 'active',
     })
     setFile(null)
     setOpen(true)
@@ -102,9 +95,8 @@ export default function PartnerProductsPage() {
             setFormData({
               name: '',
               description: '',
-              original_price: '',
-              promo_price: '',
-              active: true,
+              price: '',
+              status: 'active',
             })
             setFile(null)
             setOpen(true)
@@ -118,8 +110,7 @@ export default function PartnerProductsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
-            <TableHead>Preço Original</TableHead>
-            <TableHead>Promoção</TableHead>
+            <TableHead>Preço</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
@@ -128,9 +119,8 @@ export default function PartnerProductsPage() {
           {products.map((p) => (
             <TableRow key={p.id}>
               <TableCell className="font-medium">{p.name}</TableCell>
-              <TableCell>R$ {p.original_price.toFixed(2)}</TableCell>
-              <TableCell>R$ {p.promo_price.toFixed(2)}</TableCell>
-              <TableCell>{p.active ? 'Ativo' : 'Inativo'}</TableCell>
+              <TableCell>R$ {p.price?.toFixed(2) || '0.00'}</TableCell>
+              <TableCell>{p.status === 'active' ? 'Ativo' : 'Inativo'}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                   <Edit className="h-4 w-4" />
@@ -143,7 +133,7 @@ export default function PartnerProductsPage() {
           ))}
           {products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                 Nenhum produto cadastrado.
               </TableCell>
             </TableRow>
@@ -171,25 +161,14 @@ export default function PartnerProductsPage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Preço Original (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.original_price}
-                  onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Preço Promocional (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.promo_price}
-                  onChange={(e) => setFormData({ ...formData, promo_price: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Preço (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>Imagem</Label>
@@ -201,8 +180,10 @@ export default function PartnerProductsPage() {
             </div>
             <div className="flex items-center space-x-2">
               <Switch
-                checked={formData.active}
-                onCheckedChange={(c) => setFormData({ ...formData, active: c })}
+                checked={formData.status === 'active'}
+                onCheckedChange={(c) =>
+                  setFormData({ ...formData, status: c ? 'active' : 'inactive' })
+                }
               />
               <Label>Ativo</Label>
             </div>

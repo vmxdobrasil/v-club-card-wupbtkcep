@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { GripVertical, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export function CompanyCatalogManager({
   company,
@@ -62,6 +63,10 @@ export function CompanyCatalogManager({
     }
   }, [open, loadData])
 
+  useRealtime('company_products', () => {
+    if (open) loadData()
+  })
+
   const handleDragStart = (e: React.DragEvent, id: string, source: 'available' | 'assigned') => {
     e.dataTransfer.setData('productId', id)
     e.dataTransfer.setData('source', source)
@@ -79,7 +84,7 @@ export function CompanyCatalogManager({
       if (target === 'assigned') {
         if (propagate && company.is_headquarters) {
           const branches = await getCompanies()
-          const myBranches = branches.filter((b) => b.parent_company_id === company.id)
+          const myBranches = branches.filter((b) => b.parent_id === company.id)
           await Promise.all(
             [company.id, ...myBranches.map((b) => b.id)].map((cid) => saveCompanyProduct(cid, id)),
           )
@@ -90,7 +95,7 @@ export function CompanyCatalogManager({
       } else {
         if (propagate && company.is_headquarters) {
           const branches = await getCompanies()
-          const myBranches = branches.filter((b) => b.parent_company_id === company.id)
+          const myBranches = branches.filter((b) => b.parent_id === company.id)
           await Promise.all(
             [company.id, ...myBranches.map((b) => b.id)].map((cid) =>
               removeCompanyProduct(cid, id),
@@ -152,7 +157,7 @@ export function CompanyCatalogManager({
                       <div className="flex-1">
                         <div className="text-sm font-medium">{p.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          R$ {p.base_price?.toFixed(2)}
+                          R$ {p.price?.toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -192,7 +197,7 @@ export function CompanyCatalogManager({
                       <GripVertical className="w-4 h-4 text-primary" />
                       <div className="flex-1">
                         <div className="text-sm font-medium">{p.name}</div>
-                        <div className="text-xs text-primary">R$ {p.base_price?.toFixed(2)}</div>
+                        <div className="text-xs text-primary">R$ {p.price?.toFixed(2)}</div>
                       </div>
                       <Badge variant="secondary" className="text-[10px]">
                         Ativo

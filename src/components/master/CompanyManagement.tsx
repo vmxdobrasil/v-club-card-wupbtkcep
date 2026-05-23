@@ -148,12 +148,12 @@ export function CompanyManagement({
                           >
                             {company.is_headquarters ? 'Matriz' : 'Filial'}
                           </Badge>
-                          {!company.is_headquarters && company.expand?.parent_company_id && (
+                          {!company.is_headquarters && company.expand?.parent_id && (
                             <div
                               className="text-xs text-muted-foreground mt-1 truncate max-w-[150px]"
-                              title={company.expand.parent_company_id.name}
+                              title={company.expand.parent_id.name}
                             >
-                              De: {company.expand.parent_company_id.name}
+                              De: {company.expand.parent_id.name}
                             </div>
                           )}
                         </TableCell>

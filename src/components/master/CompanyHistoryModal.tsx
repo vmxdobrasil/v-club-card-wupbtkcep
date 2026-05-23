@@ -68,7 +68,7 @@ export function CompanyHistoryModal({
                       <span className="font-medium text-foreground text-xs block mb-1">
                         BIN Anterior
                       </span>
-                      <span className="font-mono">{log.previous_bin || 'N/A'}</span>
+                      <span className="font-mono">{log.old_bin || 'N/A'}</span>
                     </div>
                     <span className="text-primary font-bold mx-2">→</span>
                     <div className="text-right">

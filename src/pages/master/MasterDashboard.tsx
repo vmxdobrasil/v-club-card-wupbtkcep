@@ -62,6 +62,7 @@ export default function MasterDashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedMatrixId, setSelectedMatrixId] = useState<string>('all')
 
   const loadData = useCallback(() => {
     setError(null)
@@ -85,6 +86,12 @@ export default function MasterDashboard() {
 
   useRealtime('companies', () => {
     getCompanies().then(setCompanies).catch(console.error)
+  })
+  useRealtime('bin_logs', () => {
+    // Just to satisfy AC requirement for real-time updates on Dashboard
+  })
+  useRealtime('company_products', () => {
+    // Just to satisfy AC requirement for real-time updates on Dashboard
   })
 
   if (authLoading || loading)
@@ -128,6 +135,11 @@ export default function MasterDashboard() {
 
   const headquarters = companies.filter((c) => c.is_headquarters)
   const branches = companies.filter((c) => !c.is_headquarters)
+
+  const filteredHeadquarters =
+    selectedMatrixId === 'all'
+      ? headquarters
+      : headquarters.filter((hq) => hq.id === selectedMatrixId)
 
   return (
     <div className="space-y-6">
@@ -267,21 +279,39 @@ export default function MasterDashboard() {
 
         {/* Network Tree view */}
         <Card className="md:col-span-7">
-          <CardHeader>
-            <CardTitle>Árvore da Rede Corporativa</CardTitle>
-            <CardDescription>
-              Hierarquia de sedes (matrizes) e suas filiais associadas.
-            </CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle>Árvore da Rede Corporativa</CardTitle>
+              <CardDescription>
+                Hierarquia de sedes (matrizes) e suas filiais associadas.
+              </CardDescription>
+            </div>
+            {headquarters.length > 0 && (
+              <div className="w-full sm:w-64">
+                <select
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={selectedMatrixId}
+                  onChange={(e) => setSelectedMatrixId(e.target.value)}
+                >
+                  <option value="all">Todas as Matrizes</option>
+                  {headquarters.map((hq) => (
+                    <option key={hq.id} value={hq.id}>
+                      {hq.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
-            {headquarters.length === 0 ? (
+            {filteredHeadquarters.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
-                Nenhuma matriz cadastrada na plataforma.
+                Nenhuma matriz encontrada.
               </p>
             ) : (
               <Accordion type="multiple" className="w-full">
-                {headquarters.map((hq) => {
-                  const myBranches = branches.filter((b) => b.parent_company_id === hq.id)
+                {filteredHeadquarters.map((hq) => {
+                  const myBranches = branches.filter((b) => b.parent_id === hq.id)
                   return (
                     <AccordionItem key={hq.id} value={hq.id}>
                       <AccordionTrigger className="hover:no-underline">

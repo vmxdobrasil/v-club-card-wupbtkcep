@@ -5,7 +5,7 @@ export const getProducts = () =>
 export const getPartnerProducts = (partnerId: string) =>
   pb
     .collection('products')
-    .getFullList({ filter: `partner_id = '${partnerId}'`, expand: 'partner_id', sort: '-created' })
+    .getFullList({ filter: `partner_id = "${partnerId}"`, expand: 'partner_id', sort: '-created' })
 export const createProduct = (data: FormData | any) => pb.collection('products').create(data)
 export const updateProduct = (id: string, data: FormData | any) =>
   pb.collection('products').update(id, data)

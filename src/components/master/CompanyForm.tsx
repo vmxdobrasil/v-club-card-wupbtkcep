@@ -26,8 +26,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createCompany, updateCompany, type Company } from '@/services/companies'
 import { toast } from 'sonner'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
-import { Loader2, Search } from 'lucide-react'
+import { Loader2, Search, History } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
+import { CompanyHistoryModal } from './CompanyHistoryModal'
 
 const schema = z
   .object({
@@ -48,14 +49,14 @@ const schema = z
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
     is_headquarters: z.boolean().default(false),
-    parent_company_id: z.string().optional(),
+    parent_id: z.string().optional(),
     market_segment: z.string().optional(),
     cobranded_id: z.string().optional(),
     affiliate_id: z.string().optional(),
   })
-  .refine((data) => data.is_headquarters || !!data.parent_company_id, {
+  .refine((data) => data.is_headquarters || !!data.parent_id, {
     message: 'Selecione a matriz para esta filial',
-    path: ['parent_company_id'],
+    path: ['parent_id'],
   })
 
 type FormValues = z.infer<typeof schema>
@@ -102,6 +103,7 @@ const applyPhoneMask = (val: string) => {
 export function CompanyForm({ open, onOpenChange, company, companies, onSuccess }: Props) {
   const [partners, setPartners] = useState<any[]>([])
   const [isFetchingCep, setIsFetchingCep] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -127,7 +129,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       phone: '',
       whatsapp: '',
       is_headquarters: false,
-      parent_company_id: '',
+      parent_id: '',
       market_segment: '',
       cobranded_id: '',
       affiliate_id: '',
@@ -156,7 +158,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               phone: company.phone || '',
               whatsapp: company.whatsapp || '',
               is_headquarters: company.is_headquarters ?? false,
-              parent_company_id: company.parent_company_id || '',
+              parent_id: company.parent_id || '',
               market_segment: company.market_segment || '',
               cobranded_id: company.cobranded_id || '',
               affiliate_id: company.affiliate_id || '',
@@ -179,7 +181,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
               phone: '',
               whatsapp: '',
               is_headquarters: false,
-              parent_company_id: '',
+              parent_id: '',
               market_segment: '',
               cobranded_id: '',
               affiliate_id: '',
@@ -243,6 +245,11 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
         <DialogHeader>
           <DialogTitle>{company ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
         </DialogHeader>
+        <CompanyHistoryModal
+          companyId={company?.id || null}
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+        />
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -295,7 +302,20 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                       name="bin_prefix"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Prefixo BIN</FormLabel>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Prefixo BIN</FormLabel>
+                            {company && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs px-2 text-primary hover:text-primary/80"
+                                onClick={() => setHistoryOpen(true)}
+                              >
+                                <History className="w-3 h-3 mr-1" /> Histórico
+                              </Button>
+                            )}
+                          </div>
                           <FormControl>
                             <Input {...field} placeholder="Ex: 636943" />
                           </FormControl>
@@ -567,7 +587,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                               checked={field.value}
                               onCheckedChange={(val) => {
                                 field.onChange(val)
-                                if (val) form.setValue('parent_company_id', '')
+                                if (val) form.setValue('parent_id', '')
                               }}
                             />
                           </FormControl>
@@ -578,7 +598,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
                     {!isHeadquarters && (
                       <FormField
                         control={form.control}
-                        name="parent_company_id"
+                        name="parent_id"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
                             <FormLabel>Selecione a Matriz</FormLabel>
