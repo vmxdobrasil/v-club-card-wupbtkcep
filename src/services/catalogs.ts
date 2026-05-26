@@ -4,13 +4,11 @@ export const getCatalogs = () =>
   pb.collection('catalogs').getFullList({ expand: 'company_id,products', sort: '-created' })
 
 export const getCompanyCatalogs = (companyId: string) =>
-  pb
-    .collection('catalogs')
-    .getFullList({
-      filter: `company_id = '${companyId}'`,
-      expand: 'company_id,products',
-      sort: '-created',
-    })
+  pb.collection('catalogs').getFullList({
+    filter: `company_id = '${companyId}'`,
+    expand: 'company_id,products',
+    sort: '-created',
+  })
 
 export const getCatalog = (id: string) =>
   pb.collection('catalogs').getOne(id, { expand: 'company_id,products' })
