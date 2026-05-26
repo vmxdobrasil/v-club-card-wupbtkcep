@@ -18,13 +18,11 @@ export interface Lead {
 export const getLeads = () =>
   pb.collection('leads').getFullList<Lead>({ expand: 'catalog_id', sort: '-created' })
 export const getCompanyLeads = (companyId: string) =>
-  pb
-    .collection('leads')
-    .getFullList<Lead>({
-      filter: `catalog_id.company_id = '${companyId}'`,
-      expand: 'catalog_id',
-      sort: '-created',
-    })
+  pb.collection('leads').getFullList<Lead>({
+    filter: `catalog_id.company_id = '${companyId}'`,
+    expand: 'catalog_id',
+    sort: '-created',
+  })
 export const createLead = (data: Partial<Lead>) => pb.collection('leads').create<Lead>(data)
 export const updateLead = (id: string, data: Partial<Lead>) =>
   pb.collection('leads').update<Lead>(id, data)

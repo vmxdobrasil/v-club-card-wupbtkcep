@@ -31,13 +31,11 @@ export interface CatalogItem {
 export const getCatalogs = () =>
   pb.collection('catalogs').getFullList<Catalog>({ expand: 'company_id', sort: '-created' })
 export const getCompanyCatalogs = (companyId: string) =>
-  pb
-    .collection('catalogs')
-    .getFullList<Catalog>({
-      filter: `company_id = '${companyId}'`,
-      expand: 'company_id',
-      sort: '-created',
-    })
+  pb.collection('catalogs').getFullList<Catalog>({
+    filter: `company_id = '${companyId}'`,
+    expand: 'company_id',
+    sort: '-created',
+  })
 export const getCatalog = (id: string) =>
   pb.collection('catalogs').getOne<Catalog>(id, { expand: 'company_id' })
 export const getCatalogBySlug = async (slug: string) => {
@@ -52,13 +50,11 @@ export const updateCatalog = (id: string, data: Partial<Catalog>) =>
 export const deleteCatalog = (id: string) => pb.collection('catalogs').delete(id)
 
 export const getCatalogItems = (catalogId: string) =>
-  pb
-    .collection('catalog_items')
-    .getFullList<CatalogItem>({
-      filter: `catalog_id = '${catalogId}'`,
-      expand: 'product_id,catalog_id',
-      sort: '-created',
-    })
+  pb.collection('catalog_items').getFullList<CatalogItem>({
+    filter: `catalog_id = '${catalogId}'`,
+    expand: 'product_id,catalog_id',
+    sort: '-created',
+  })
 export const createCatalogItem = (data: Partial<CatalogItem>) =>
   pb.collection('catalog_items').create<CatalogItem>(data)
 export const deleteCatalogItem = (id: string) => pb.collection('catalog_items').delete(id)

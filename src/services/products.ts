@@ -19,13 +19,11 @@ export interface Product {
 export const getProducts = () =>
   pb.collection('products').getFullList<Product>({ expand: 'company_id', sort: '-created' })
 export const getCompanyProducts = (companyId: string) =>
-  pb
-    .collection('products')
-    .getFullList<Product>({
-      filter: `company_id = '${companyId}'`,
-      expand: 'company_id',
-      sort: '-created',
-    })
+  pb.collection('products').getFullList<Product>({
+    filter: `company_id = '${companyId}'`,
+    expand: 'company_id',
+    sort: '-created',
+  })
 export const getProduct = (id: string) =>
   pb.collection('products').getOne<Product>(id, { expand: 'company_id' })
 export const createProduct = (data: FormData | Partial<Product>) =>

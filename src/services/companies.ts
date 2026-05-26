@@ -16,6 +16,8 @@ export interface Company {
 
 export const getCompanies = () => pb.collection('companies').getFullList<Company>()
 export const getCompany = (id: string) => pb.collection('companies').getOne<Company>(id)
+export const getMyCompany = async (userId: string) =>
+  pb.collection('companies').getFirstListItem<Company>(`owner_id="${userId}"`)
 export const createCompany = (data: Partial<Company>) =>
   pb.collection('companies').create<Company>(data)
 export const updateCompany = (id: string, data: Partial<Company>) =>
