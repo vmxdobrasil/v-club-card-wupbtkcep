@@ -15,6 +15,8 @@ import MasterCatalogDetailsPage from './pages/master/MasterCatalogDetailsPage'
 import CompanyDashboard from './pages/company/CompanyDashboard'
 import CompanyCatalogsPage from './pages/company/CompanyCatalogsPage'
 import CompanyCatalogDetailsPage from './pages/company/CompanyCatalogDetailsPage'
+import CompanyAIAgentPage from './pages/company/CompanyAIAgentPage'
+import PublicCatalogPage from './pages/public/PublicCatalogPage'
 import HolderDashboard from './pages/holder/HolderDashboard'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
 import PartnerProductsPage from './pages/partner/PartnerProductsPage'
@@ -29,6 +31,7 @@ const App = () => (
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
+            <Route path="/public/catalog/:id" element={<PublicCatalogPage />} />
             <Route path="/master" element={<MasterDashboard />} />
             <Route
               path="/master/companies"
@@ -42,6 +45,7 @@ const App = () => (
             <Route path="/company" element={<CompanyDashboard />} />
             <Route path="/company/catalogs" element={<CompanyCatalogsPage />} />
             <Route path="/company/catalogs/:id" element={<CompanyCatalogDetailsPage />} />
+            <Route path="/company/ai-agent" element={<CompanyAIAgentPage />} />
             <Route path="/holder" element={<HolderDashboard />} />
             <Route path="/partner" element={<PartnerDashboard />} />
             <Route path="/partner/products" element={<PartnerProductsPage />} />
