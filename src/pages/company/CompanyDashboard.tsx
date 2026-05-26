@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
-import pb from '@/lib/pocketbase/client'
-import { Company } from '@/services/companies'
-import { getCompanyProducts, createProduct, Product } from '@/services/products'
-import { getCompanyLeads, Lead } from '@/services/leads'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Plus, Image as ImageIcon } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -14,239 +11,235 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useRealtime } from '@/hooks/use-realtime'
-import { Loader2, Package, Users, Plus, TrendingUp } from 'lucide-react'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getCompanyProducts, createProduct, deleteProduct } from '@/services/products'
+import pb from '@/lib/pocketbase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function CompanyDashboard() {
   const { user } = useAuth()
-  const [company, setCompany] = useState<Company | null>(null)
-  const [products, setProducts] = useState<Product[]>([])
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState<any[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
-  const [newProdName, setNewProdName] = useState('')
-  const [newProdPrice, setNewProdPrice] = useState('')
-  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock_status: 'in_stock',
+  })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
 
-  const loadData = async (compId: string) => {
+  useEffect(() => {
+    if (user) {
+      pb.collection('companies')
+        .getFirstListItem(`owner_id = '${user.id}'`)
+        .then((comp) => {
+          setCompanyId(comp.id)
+          loadData(comp.id)
+        })
+        .catch(() =>
+          toast({ title: 'Aviso', description: 'Nenhuma empresa associada encontrada.' }),
+        )
+    }
+  }, [user])
+
+  const loadData = async (cid: string) => {
     try {
-      const [prods, lds] = await Promise.all([getCompanyProducts(compId), getCompanyLeads(compId)])
+      const prods = await getCompanyProducts(cid)
       setProducts(prods)
-      setLeads(lds)
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Erro ao carregar produtos.', variant: 'destructive' })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!companyId) return
+    if (!formData.name || !formData.price) {
+      toast({
+        title: 'Validação',
+        description: 'Nome e Preço são obrigatórios.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setLoading(true)
+    try {
+      const data = new FormData()
+      data.append('name', formData.name)
+      data.append('description', formData.description)
+      data.append('price', formData.price)
+      data.append('company_id', companyId)
+      data.append('stock_status', formData.stock_status)
+      if (imageFile) data.append('image', imageFile)
+
+      await createProduct(data)
+      toast({ title: 'Sucesso', description: 'Produto criado com sucesso.' })
+      setIsDialogOpen(false)
+      loadData(companyId)
+      setFormData({ name: '', description: '', price: '', stock_status: 'in_stock' })
+      setImageFile(null)
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Falha ao criar produto.', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (user?.id) {
-      pb.collection('companies')
-        .getFirstListItem<Company>(`owner_id="${user.id}"`)
-        .then((c) => {
-          setCompany(c)
-          loadData(c.id)
-        })
-        .catch(() => setLoading(false))
-    }
-  }, [user])
-
-  useRealtime(
-    'products',
-    () => {
-      if (company) loadData(company.id)
-    },
-    !!company,
-  )
-  useRealtime(
-    'leads',
-    () => {
-      if (company) loadData(company.id)
-    },
-    !!company,
-  )
-
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!company) return
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja excluir este produto?')) return
     try {
-      await createProduct({
-        name: newProdName,
-        price: Number(newProdPrice),
-        company_id: company.id,
-        status: 'active',
-      })
-      toast.success('Product added')
-      setOpen(false)
-      setNewProdName('')
-      setNewProdPrice('')
-    } catch (err) {
-      toast.error('Failed to add product')
+      await deleteProduct(id)
+      toast({ title: 'Sucesso', description: 'Produto excluído.' })
+      if (companyId) loadData(companyId)
+    } catch {
+      toast({ title: 'Erro', description: 'Erro ao excluir.', variant: 'destructive' })
     }
   }
 
-  if (loading)
-    return (
-      <div className="flex justify-center p-20">
-        <Loader2 className="animate-spin text-muted-foreground w-8 h-8" />
-      </div>
-    )
-  if (!company)
-    return <div className="p-8 text-center text-muted-foreground">Company profile not found.</div>
-
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard - {company.name}</h1>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Meus Produtos</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button disabled={!companyId}>
+              <Plus className="mr-2 h-4 w-4" /> Novo Produto
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adicionar Produto</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Preço</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estoque</Label>
+                  <Select
+                    value={formData.stock_status}
+                    onValueChange={(v) => setFormData({ ...formData, stock_status: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_stock">Em Estoque</SelectItem>
+                      <SelectItem value="out_of_stock">Esgotado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Imagem</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                Salvar
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="leads">CRM / Leads</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{products.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{leads.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Catalogs</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">Manage in Catalogs Tab</div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="products">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Products</CardTitle>
-              <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" /> Add Product
+      <div className="bg-white rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Imagem</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>Preço</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.map((product) => (
+              <TableRow key={product.id}>
+                <TableCell>
+                  {product.image ? (
+                    <img
+                      src={pb.files.getURL(product, product.image, { thumb: '100x100' })}
+                      className="w-10 h-10 object-cover rounded"
+                      alt=""
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-slate-100 flex items-center justify-center rounded">
+                      <ImageIcon className="text-slate-400 w-5 h-5" />
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">{product.name}</TableCell>
+                <TableCell>R$ {product.price?.toFixed(2) || '0.00'}</TableCell>
+                <TableCell>
+                  {product.stock_status === 'in_stock' ? 'Estoque' : 'Esgotado'}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500"
+                    onClick={() => handleDelete(product.id)}
+                  >
+                    Excluir
                   </Button>
-                </DialogTrigger>
-                <DialogContent aria-describedby="add-product-desc">
-                  <DialogHeader>
-                    <DialogTitle>Add Product</DialogTitle>
-                    <DialogDescription id="add-product-desc">
-                      Add a new product to your inventory.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleAddProduct} className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input
-                        required
-                        value={newProdName}
-                        onChange={(e) => setNewProdName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Price</Label>
-                      <Input
-                        required
-                        type="number"
-                        step="0.01"
-                        value={newProdPrice}
-                        onChange={(e) => setNewProdPrice(e.target.value)}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Save
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell>${p.price?.toFixed(2)}</TableCell>
-                      <TableCell>{p.status}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="leads">
-          <Card>
-            <CardHeader>
-              <CardTitle>Incoming Leads</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact Info</TableHead>
-                    <TableHead>Source</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell>{format(new Date(l.created), 'dd/MM/yyyy HH:mm')}</TableCell>
-                      <TableCell className="font-medium">{l.name}</TableCell>
-                      <TableCell>{l.contact_info}</TableCell>
-                      <TableCell>{l.source}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                </TableCell>
+              </TableRow>
+            ))}
+            {products.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                  Nenhum produto encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

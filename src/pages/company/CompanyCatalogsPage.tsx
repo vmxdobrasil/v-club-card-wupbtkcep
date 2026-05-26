@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
-import pb from '@/lib/pocketbase/client'
-import { Company } from '@/services/companies'
-import { getCompanyCatalogs, createCatalog, Catalog } from '@/services/catalogs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, Eye } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -13,179 +11,189 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useRealtime } from '@/hooks/use-realtime'
-import { Loader2, Plus, Settings, Share2 } from 'lucide-react'
-import { toast } from 'sonner'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getCompanyCatalogs, createCatalog, deleteCatalog } from '@/services/catalogs'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+import pb from '@/lib/pocketbase/client'
 
 export default function CompanyCatalogsPage() {
   const { user } = useAuth()
-  const [company, setCompany] = useState<Company | null>(null)
-  const [catalogs, setCatalogs] = useState<Catalog[]>([])
-  const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
+  const [catalogs, setCatalogs] = useState<any[]>([])
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
-  const loadCatalogs = async (compId: string) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    status: 'active',
+  })
+
+  useEffect(() => {
+    if (user) {
+      pb.collection('companies')
+        .getFirstListItem(`owner_id = '${user.id}'`)
+        .then((comp) => {
+          setCompanyId(comp.id)
+          loadData(comp.id)
+        })
+        .catch(() => toast({ title: 'Aviso', description: 'Nenhuma empresa encontrada.' }))
+    }
+  }, [user])
+
+  const loadData = async (cid: string) => {
     try {
-      const data = await getCompanyCatalogs(compId)
-      setCatalogs(data)
-    } catch (error) {
-      console.error(error)
+      const cats = await getCompanyCatalogs(cid)
+      setCatalogs(cats)
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Erro ao carregar catálogos.', variant: 'destructive' })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!companyId) return
+    if (!formData.name) {
+      toast({ title: 'Validação', description: 'Nome é obrigatório.', variant: 'destructive' })
+      return
+    }
+    setLoading(true)
+    try {
+      await createCatalog({ ...formData, company_id: companyId })
+      toast({ title: 'Sucesso', description: 'Catálogo criado.' })
+      setIsDialogOpen(false)
+      loadData(companyId)
+      setFormData({ name: '', status: 'active' })
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Falha ao criar.', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (user?.id) {
-      pb.collection('companies')
-        .getFirstListItem<Company>(`owner_id="${user.id}"`)
-        .then((c) => {
-          setCompany(c)
-          loadCatalogs(c.id)
-        })
-        .catch(() => setLoading(false))
-    }
-  }, [user])
-
-  useRealtime(
-    'catalogs',
-    () => {
-      if (company) loadCatalogs(company.id)
-    },
-    !!company,
-  )
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!company) return
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja excluir este catálogo?')) return
     try {
-      await createCatalog({
-        name,
-        slug,
-        company_id: company.id,
-        status: 'active',
-        is_promotional: true,
-      })
-      toast.success('Catalog created')
-      setOpen(false)
-      setName('')
-      setSlug('')
-    } catch (error) {
-      toast.error('Failed to create catalog')
+      await deleteCatalog(id)
+      toast({ title: 'Sucesso', description: 'Catálogo excluído.' })
+      if (companyId) loadData(companyId)
+    } catch {
+      toast({ title: 'Erro', description: 'Erro ao excluir.', variant: 'destructive' })
     }
   }
-
-  const handleShare = (catalog: Catalog) => {
-    const url = `${window.location.origin}/catalog/${catalog.slug}`
-    const text = `Confira nosso catálogo promocional: ${catalog.name}!\n${url}`
-    navigator.clipboard.writeText(text)
-    toast.success('Link copiado para a área de transferência!')
-  }
-
-  if (loading)
-    return (
-      <div className="flex justify-center p-20">
-        <Loader2 className="animate-spin text-muted-foreground w-8 h-8" />
-      </div>
-    )
-  if (!company)
-    return <div className="p-8 text-center text-muted-foreground">Company profile not found.</div>
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">My Catalogs</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Meus Catálogos</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" /> New Catalog
+            <Button disabled={!companyId}>
+              <Plus className="mr-2 h-4 w-4" /> Novo Catálogo
             </Button>
           </DialogTrigger>
-          <DialogContent aria-describedby="new-cat-desc">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Catalog</DialogTitle>
-              <DialogDescription id="new-cat-desc">
-                Create a new digital storefront.
-              </DialogDescription>
+              <DialogTitle>Criar Catálogo</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4 pt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Catalog Name</Label>
-                <Input required value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>URL Slug</Label>
+                <Label>Nome</Label>
                 <Input
-                  required
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="e.g. promo-diadospais"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Save
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                Salvar
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Catalogs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>URL Slug</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+      <div className="bg-white rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Produtos</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {catalogs.map((catalog) => (
+              <TableRow key={catalog.id}>
+                <TableCell className="font-medium">{catalog.name}</TableCell>
+                <TableCell>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${catalog.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}
+                  >
+                    {catalog.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </TableCell>
+                <TableCell>{catalog.products?.length || 0} itens</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/company/catalogs/${catalog.id}`}>Gerenciar</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`/catalog/${catalog.id}`} target="_blank" rel="noreferrer">
+                      <Eye className="w-4 h-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500"
+                    onClick={() => handleDelete(catalog.id)}
+                  >
+                    Excluir
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {catalogs.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="text-muted-foreground">/catalog/{c.slug}</TableCell>
-                  <TableCell>{c.status}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleShare(c)}>
-                      <Share2 className="w-4 h-4 mr-2" /> Share
-                    </Button>
-                    <Button variant="secondary" size="sm" asChild>
-                      <Link to={`/company/catalogs/${c.id}`}>
-                        <Settings className="w-4 h-4 mr-2" /> Manage Items
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {catalogs.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
-                    No catalogs found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+            {catalogs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                  Nenhum catálogo encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

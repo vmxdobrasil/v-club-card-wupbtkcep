@@ -1,24 +1,11 @@
 import pb from '@/lib/pocketbase/client'
-import { RecordModel } from 'pocketbase'
 
-export interface Company extends RecordModel {
-  name: string
-  logo: string
-  bin_prefix: string
-  commission_rate: number
-  modality: string
-  gateway_provider: string
-  status: string
-  owner_id: string
-  category: string
-}
+export const getCompanies = () => pb.collection('companies').getFullList({ sort: '-created' })
 
-export const getCompanies = () =>
-  pb.collection('companies').getFullList<Company>({ sort: '-created' })
+export const getCompany = (id: string) => pb.collection('companies').getOne(id)
 
-export const getMyCompany = async () => {
-  if (!pb.authStore.isValid || !pb.authStore.record) throw new Error('Not authenticated')
-  return pb
-    .collection('companies')
-    .getFirstListItem<Company>(`owner_id = '${pb.authStore.record.id}'`)
-}
+export const createCompany = (data: any) => pb.collection('companies').create(data)
+
+export const updateCompany = (id: string, data: any) => pb.collection('companies').update(id, data)
+
+export const deleteCompany = (id: string) => pb.collection('companies').delete(id)

@@ -1,31 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import {
-  getCatalogs,
-  createCatalog,
-  updateCatalog,
-  deleteCatalog,
-  Catalog,
-} from '@/services/catalogs'
-import { getCompanies, Company } from '@/services/companies'
+import { useEffect, useState } from 'react'
+import { Plus, Eye } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -34,201 +11,116 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { getCatalogs, createCatalog, deleteCatalog } from '@/services/catalogs'
+import { getCompanies } from '@/services/companies'
+import { Link } from 'react-router-dom'
 
 export default function MasterCatalogsPage() {
-  const [catalogs, setCatalogs] = useState<Catalog[]>([])
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [loading, setLoading] = useState(true)
+  const [catalogs, setCatalogs] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
-  const [isDialog, setIsDialog] = useState(false)
-  const [form, setForm] = useState<Partial<Catalog>>({})
-  const [file, setFile] = useState<File | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    company_id: '',
+    status: 'active',
+  })
 
   useEffect(() => {
-    Promise.all([getCatalogs(), getCompanies()])
-      .then(([c, comp]) => {
-        setCatalogs(c)
-        setCompanies(comp)
-      })
-      .finally(() => setLoading(false))
+    loadData()
   }, [])
 
-  const handleSave = async () => {
+  const loadData = async () => {
     try {
-      const formData = new FormData()
-      if (form.title) formData.append('title', form.title)
-      if (form.description) formData.append('description', form.description)
-      if (form.slug) formData.append('slug', form.slug)
-      if (form.status) formData.append('status', form.status)
-      if (form.company_id) formData.append('company_id', form.company_id)
-      if (file) formData.append('banner', file)
+      const [cats, comps] = await Promise.all([getCatalogs(), getCompanies()])
+      setCatalogs(cats)
+      setCompanies(comps)
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Erro ao carregar dados.', variant: 'destructive' })
+    }
+  }
 
-      if (form.id) {
-        await updateCatalog(form.id, formData as any)
-        toast.success('Catalog updated')
-      } else {
-        await createCatalog(formData as any)
-        toast.success('Catalog created')
-      }
-      setIsDialog(false)
-      const updated = await getCatalogs()
-      setCatalogs(updated)
-    } catch (e: any) {
-      toast.error(e.message || 'Error saving catalog')
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name || !formData.company_id) {
+      toast({
+        title: 'Validação',
+        description: 'Nome e Empresa são obrigatórios.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setLoading(true)
+    try {
+      await createCatalog(formData)
+      toast({ title: 'Sucesso', description: 'Catálogo criado com sucesso.' })
+      setIsDialogOpen(false)
+      loadData()
+      setFormData({ name: '', company_id: '', status: 'active' })
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Falha ao criar catálogo.', variant: 'destructive' })
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this catalog?')) {
+    if (!confirm('Deseja excluir este catálogo?')) return
+    try {
       await deleteCatalog(id)
-      setCatalogs((c) => c.filter((x) => x.id !== id))
-      toast.success('Catalog deleted')
+      toast({ title: 'Sucesso', description: 'Catálogo excluído.' })
+      loadData()
+    } catch {
+      toast({ title: 'Erro', description: 'Erro ao excluir.', variant: 'destructive' })
     }
   }
 
-  if (loading) return <div>Loading...</div>
+  const filteredCatalogs =
+    selectedCompanyId === 'all'
+      ? catalogs
+      : catalogs.filter((c) => c.company_id === selectedCompanyId)
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catalogs Management</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Create and manage public storefront catalogs.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setForm({ status: 'active' })
-            setFile(null)
-            setIsDialog(true)
-          }}
-        >
-          Create Catalog
-        </Button>
-      </div>
-
-      <div className="bg-white rounded-md border shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Public URL</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {catalogs.map((c) => {
-              const comp = companies.find((x) => x.id === c.company_id)
-              return (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.title}</TableCell>
-                  <TableCell>{comp?.name || 'Unknown'}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
-                    >
-                      {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <a
-                      href={`/catalog/${c.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium"
-                    >
-                      /c/{c.slug}
-                    </a>
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="secondary" size="sm" asChild>
-                      <Link to={`/master/catalogs/${c.id}`}>Products</Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setForm(c)
-                        setFile(null)
-                        setIsDialog(true)
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                      onClick={() => handleDelete(c.id)}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-            {catalogs.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                  No catalogs created yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={isDialog} onOpenChange={setIsDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{form.id ? 'Edit' : 'New'} Catalog</DialogTitle>
-            <DialogDescription>
-              Setup your promotional catalog. The slug will be used for the public URL.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input
-                value={form.title || ''}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Summer Sale 2024"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                value={form.description || ''}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="A short catchy description..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Slug (URL path)</Label>
-              <Input
-                value={form.slug || ''}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-                  })
-                }
-                placeholder="summer-sale-24"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+        <h1 className="text-3xl font-bold">Catálogos Promocionais</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Novo Catálogo
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Catálogo</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Company</Label>
+                <Label>Empresa</Label>
                 <Select
-                  value={form.company_id}
-                  onValueChange={(v) => setForm({ ...form, company_id: v })}
+                  value={formData.company_id}
+                  onValueChange={(v) => setFormData({ ...formData, company_id: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select company" />
+                    <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
                     {companies.map((c) => (
@@ -240,38 +132,105 @@ export default function MasterCatalogsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Nome do Catálogo</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Status</Label>
                 <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm({ ...form, status: v as any })}
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Banner Image</Label>
-              <Input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                accept="image/*"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>Save Catalog</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <Button type="submit" className="w-full" disabled={loading}>
+                Salvar
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex gap-4 items-center">
+        <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Filtrar por empresa" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as Empresas</SelectItem>
+            {companies.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="bg-white rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Empresa</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Produtos</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredCatalogs.map((catalog) => (
+              <TableRow key={catalog.id}>
+                <TableCell className="font-medium">{catalog.name}</TableCell>
+                <TableCell>{catalog.expand?.company_id?.name || 'N/A'}</TableCell>
+                <TableCell>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${catalog.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}
+                  >
+                    {catalog.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </TableCell>
+                <TableCell>{catalog.products?.length || 0} itens</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/master/catalogs/${catalog.id}`}>Gerenciar</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`/catalog/${catalog.id}`} target="_blank" rel="noreferrer">
+                      <Eye className="w-4 h-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500"
+                    onClick={() => handleDelete(catalog.id)}
+                  >
+                    Excluir
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredCatalogs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                  Nenhum catálogo encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
