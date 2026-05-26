@@ -12,3 +12,7 @@ export const getCompanies = (filter?: string) =>
   pb.collection('companies').getFullList({ filter, sort: '-created' })
 
 export const deleteCompany = (id: string) => pb.collection('companies').delete(id)
+
+export const createCompany = (data: any) => pb.collection('companies').create(data)
+
+export const updateCompany = (id: string, data: any) => pb.collection('companies').update(id, data)
