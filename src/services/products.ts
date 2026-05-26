@@ -16,6 +16,8 @@ export const getProducts = (companyId?: string) =>
     sort: '-created',
   })
 
+export const getCompanyProducts = (companyId: string) => getProducts(companyId)
+
 export const getProduct = (id: string) => pb.collection('products').getOne<Product>(id)
 
 export const createProduct = (data: FormData) => pb.collection('products').create<Product>(data)

@@ -1,27 +1,16 @@
-// @deps zod@3.23.8
 routerAdd('POST', '/backend/v1/ai-chat', (e) => {
-  const { z } = require('zod')
   const body = e.requestInfo().body || {}
 
-  const schema = z.object({
-    message: z.string(),
-    company_id: z.string(),
-    history: z
-      .array(
-        z.object({
-          role: z.enum(['user', 'assistant']),
-          content: z.string(),
-        }),
-      )
-      .default([]),
-  })
-
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    return e.badRequestError(parsed.error.message)
+  if (!body.message || typeof body.message !== 'string') {
+    return e.badRequestError('message is required')
+  }
+  if (!body.company_id || typeof body.company_id !== 'string') {
+    return e.badRequestError('company_id is required')
   }
 
-  const { message, company_id, history } = parsed.data
+  const message = body.message
+  const company_id = body.company_id
+  const history = Array.isArray(body.history) ? body.history : []
 
   const aiUrl = $secrets.get('SKIP_AI_GATEWAY_URL')
   const aiKey = $secrets.get('SKIP_AI_GATEWAY_API_KEY')
