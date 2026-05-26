@@ -1,81 +1,93 @@
-import { useEffect, useState, useCallback } from 'react'
-import { getCompanies, type Company } from '@/services/companies'
+import { useEffect, useState } from 'react'
+import { getCompanies, Company } from '@/services/companies'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 import { useRealtime } from '@/hooks/use-realtime'
-import { CompanyManagement } from '@/components/master/CompanyManagement'
-import { useAuth } from '@/hooks/use-auth'
-import { Loader2, AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 
-export default function MasterCompaniesPage({
-  defaultTab = 'companies',
-}: {
-  defaultTab?: 'companies' | 'bins'
-}) {
-  const { user, loading: authLoading } = useAuth()
+export default function MasterCompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  const loadData = useCallback(() => {
-    setError(null)
-    setLoading(true)
-    getCompanies()
-      .then(setCompanies)
-      .catch(() => {
-        setError('Não foi possível carregar as empresas. Verifique sua conexão ou permissões.')
-      })
-      .finally(() => setLoading(false))
-  }, [])
+  const loadCompanies = async () => {
+    try {
+      const data = await getCompanies()
+      setCompanies(data)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadCompanies()
+  }, [])
 
   useRealtime('companies', () => {
-    getCompanies()
-      .then(setCompanies)
-      .catch(() => {})
+    loadCompanies()
   })
 
-  if (authLoading || loading) {
-    return (
-      <div className="flex items-center justify-center p-10 min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  if (user?.role !== 'master') {
-    return (
-      <div className="flex items-center justify-center p-10 min-h-[50vh]">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Acesso Negado</AlertTitle>
-          <AlertDescription>Você não tem permissão para acessar esta seção.</AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center p-10 min-h-[50vh] space-y-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Erro ao carregar dados</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button onClick={loadData} variant="outline">
-          Tentar Novamente
-        </Button>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6">
-      <CompanyManagement companies={companies} defaultTab={defaultTab} />
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Companies</h1>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Companies</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>BIN Prefix</TableHead>
+                  <TableHead>Modality</TableHead>
+                  <TableHead>Gateway</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.map((company) => (
+                  <TableRow key={company.id}>
+                    <TableCell className="font-medium">{company.name}</TableCell>
+                    <TableCell>{company.bin_prefix}</TableCell>
+                    <TableCell>{company.modality}</TableCell>
+                    <TableCell>{company.gateway_provider}</TableCell>
+                    <TableCell>
+                      <Badge variant={company.status === 'active' ? 'default' : 'secondary'}>
+                        {company.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {companies.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No companies found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

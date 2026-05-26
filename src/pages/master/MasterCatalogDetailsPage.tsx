@@ -1,57 +1,115 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { getCatalog } from '@/services/catalogs'
-import { getProducts } from '@/services/products'
+import { useParams, Link } from 'react-router-dom'
+import {
+  getCatalog,
+  getCatalogItems,
+  deleteCatalogItem,
+  Catalog,
+  CatalogItem,
+} from '@/services/catalogs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import pb from '@/lib/pocketbase/client'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Loader2, ArrowLeft, Trash2 } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
+import { toast } from 'sonner'
 
 export default function MasterCatalogDetailsPage() {
-  const { id } = useParams()
-  const [catalog, setCatalog] = useState<any>(null)
-  const [products, setProducts] = useState<any[]>([])
+  const { id } = useParams<{ id: string }>()
+  const [catalog, setCatalog] = useState<Catalog | null>(null)
+  const [items, setItems] = useState<CatalogItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = async () => {
+    if (!id) return
+    try {
+      const [cat, itms] = await Promise.all([getCatalog(id), getCatalogItems(id)])
+      setCatalog(cat)
+      setItems(itms)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    if (id) {
-      getCatalog(id).then(setCatalog)
-      getProducts(id).then(setProducts)
-    }
+    loadData()
   }, [id])
+  useRealtime('catalog_items', () => {
+    loadData()
+  })
 
-  if (!catalog) return <div className="p-8">Carregando...</div>
+  const handleDeleteItem = async (itemId: string) => {
+    try {
+      await deleteCatalogItem(itemId)
+      toast.success('Removed from catalog')
+    } catch (error) {
+      toast.error('Failed to remove item')
+    }
+  }
+
+  if (loading)
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="animate-spin w-8 h-8 text-muted-foreground" />
+      </div>
+    )
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-2">{catalog.name}</h1>
-      <p className="text-muted-foreground mb-6">Empresa: {catalog.expand?.company_id?.name}</p>
-
-      <h2 className="text-xl font-semibold mb-4">Produtos</h2>
-      <div className="grid gap-4 md:grid-cols-4">
-        {products.map((p) => (
-          <Card key={p.id}>
-            {p.image && (
-              <img
-                src={pb.files.getURL(p, p.image)}
-                alt={p.name}
-                className="w-full h-32 object-cover rounded-t-lg"
-              />
-            )}
-            <CardHeader>
-              <CardTitle className="text-lg leading-tight">{p.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">{p.description}</p>
-              <p className="font-bold text-primary">
-                R$ {p.promo_price > 0 ? p.promo_price : p.original_price}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-        {products.length === 0 && (
-          <p className="text-muted-foreground col-span-4 p-4 border border-dashed rounded text-center">
-            Nenhum produto cadastrado neste catálogo.
-          </p>
-        )}
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" size="icon" asChild>
+          <Link to="/master/catalogs">
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">{catalog?.name} - Items</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Products in Catalog</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product Name</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.expand?.product_id?.name}</TableCell>
+                  <TableCell>${item.expand?.product_id?.price?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item.id)}>
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {items.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    No products in this catalog.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

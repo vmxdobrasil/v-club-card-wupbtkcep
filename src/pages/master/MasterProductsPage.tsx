@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2 } from 'lucide-react'
-import { getProducts, createProduct, updateProduct, deleteProduct } from '@/services/catalog'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+import { getProducts, createProduct, deleteProduct, Product } from '@/services/products'
+import { getCompanies, Company } from '@/services/companies'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -10,9 +10,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -21,202 +28,156 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { toast } from 'sonner'
 import { useRealtime } from '@/hooks/use-realtime'
-import { Badge } from '@/components/ui/badge'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function MasterProductsPage() {
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    status: 'active',
-  })
-  const [file, setFile] = useState<File | null>(null)
 
-  const load = () => {
-    getProducts().then(setProducts).catch(console.error)
-  }
+  const [name, setName] = useState('')
+  const [price, setPrice] = useState('')
+  const [companyId, setCompanyId] = useState('')
 
-  useEffect(() => {
-    load()
-  }, [])
-
-  useRealtime('products', () => {
-    load()
-  })
-
-  const handleSave = async () => {
-    if (!formData.name || !formData.price) {
-      toast.error('Preencha os campos obrigatórios')
-      return
-    }
-    setLoading(true)
-    const data = new FormData()
-    data.append('name', formData.name)
-    data.append('description', formData.description)
-    data.append('price', formData.price)
-    data.append('status', formData.status)
-    if (file) data.append('image', file)
-
+  const loadData = async () => {
     try {
-      if (editing) await updateProduct(editing.id, data)
-      else await createProduct(data)
-      toast.success('Salvo com sucesso')
-      setOpen(false)
-      load()
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao salvar')
+      const [prods, comps] = await Promise.all([getProducts(), getCompanies()])
+      setProducts(prods)
+      setCompanies(comps)
+    } catch (error) {
+      console.error(error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Excluir produto?')) {
-      await deleteProduct(id)
-      load()
+  useEffect(() => {
+    loadData()
+  }, [])
+  useRealtime('products', () => {
+    loadData()
+  })
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await createProduct({ name, price: Number(price), company_id: companyId, status: 'active' })
+      toast.success('Product created')
+      setOpen(false)
+      setName('')
+      setPrice('')
+      setCompanyId('')
+    } catch (error) {
+      toast.error('Failed to create product')
     }
   }
 
-  const openEdit = (p: any) => {
-    setEditing(p)
-    setFormData({
-      name: p.name,
-      description: p.description || '',
-      price: p.price?.toString() || '0',
-      status: p.status || 'active',
-    })
-    setFile(null)
-    setOpen(true)
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProduct(id)
+      toast.success('Product deleted')
+    } catch (error) {
+      toast.error('Failed to delete product')
+    }
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-tight">Gestão de Produtos</h1>
-        <Button
-          onClick={() => {
-            setEditing(null)
-            setFormData({
-              name: '',
-              description: '',
-              price: '',
-              status: 'active',
-            })
-            setOpen(true)
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Novo Produto
-        </Button>
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Products Master List</h1>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" /> Add Product
+            </Button>
+          </DialogTrigger>
+          <DialogContent aria-describedby="add-product-desc">
+            <DialogHeader>
+              <DialogTitle>Add New Product</DialogTitle>
+              <DialogDescription id="add-product-desc">
+                Create a new global product.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreate} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Product Name</Label>
+                <Input required value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Price</Label>
+                <Input
+                  required
+                  type="number"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Company</Label>
+                <Select required value={companyId} onValueChange={setCompanyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full">
+                Save Product
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Preço Base</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {products.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell className="font-medium">{p.name}</TableCell>
-              <TableCell>R$ {p.price?.toFixed(2) || '0.00'}</TableCell>
-              <TableCell>
-                <Badge variant={p.status === 'active' ? 'default' : 'secondary'}>
-                  {p.status === 'active' ? 'Ativo' : 'Inativo'}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-          {products.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                Nenhum produto cadastrado.
-              </TableCell>
-            </TableRow>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Products</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell>${p.price?.toFixed(2)}</TableCell>
+                    <TableCell>{p.expand?.company_id?.name || 'Unknown'}</TableCell>
+                    <TableCell>{p.status}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
-        </TableBody>
-      </Table>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Preço Base (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(v) => setFormData({ ...formData, status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Imagem do Produto</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={loading}>
-              {loading ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   )
 }
