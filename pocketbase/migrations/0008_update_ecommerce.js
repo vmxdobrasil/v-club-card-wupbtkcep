@@ -1,15 +1,42 @@
 migrate(
   (app) => {
-    const products = app.findCollectionByNameOrId('products')
+    let products
+    try {
+      products = app.findCollectionByNameOrId('products')
+    } catch (_) {
+      products = new Collection({
+        name: 'products',
+        type: 'base',
+        listRule: '',
+        viewRule: '',
+        createRule: "@request.auth.id != ''",
+        updateRule: '',
+        deleteRule: '',
+        fields: [
+          { name: 'name', type: 'text', required: true },
+          { name: 'description', type: 'text' },
+          {
+            name: 'image',
+            type: 'file',
+            maxSelect: 1,
+            maxSize: 5242880,
+            mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          },
+          { name: 'stock_status', type: 'select', values: ['in_stock', 'out_of_stock'] },
+          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+        ],
+      })
+      app.save(products)
+    }
 
     if (!products.fields.getByName('company_id')) {
-      products.fields.add(
-        new RelationField({
-          name: 'company_id',
-          collectionId: app.findCollectionByNameOrId('companies').id,
-          maxSelect: 1,
-        }),
-      )
+      try {
+        const companiesId = app.findCollectionByNameOrId('companies').id
+        products.fields.add(
+          new RelationField({ name: 'company_id', collectionId: companiesId, maxSelect: 1 }),
+        )
+      } catch (_) {}
     }
     if (!products.fields.getByName('price')) {
       products.fields.add(new NumberField({ name: 'price' }))
@@ -26,7 +53,37 @@ migrate(
 
     app.save(products)
 
-    const catalogs = app.findCollectionByNameOrId('catalogs')
+    let catalogs
+    try {
+      catalogs = app.findCollectionByNameOrId('catalogs')
+    } catch (_) {
+      catalogs = new Collection({
+        name: 'catalogs',
+        type: 'base',
+        listRule: '',
+        viewRule: '',
+        createRule: "@request.auth.id != ''",
+        updateRule: "@request.auth.id != ''",
+        deleteRule: "@request.auth.id != ''",
+        fields: [
+          { name: 'name', type: 'text', required: true },
+          { name: 'status', type: 'select', values: ['active', 'inactive'] },
+          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+        ],
+      })
+      app.save(catalogs)
+    }
+
+    if (!catalogs.fields.getByName('company_id')) {
+      try {
+        const companiesId = app.findCollectionByNameOrId('companies').id
+        catalogs.fields.add(
+          new RelationField({ name: 'company_id', collectionId: companiesId, maxSelect: 1 }),
+        )
+      } catch (_) {}
+    }
+
     if (!catalogs.fields.getByName('products')) {
       catalogs.fields.add(
         new RelationField({ name: 'products', collectionId: products.id, maxSelect: 2000 }),
