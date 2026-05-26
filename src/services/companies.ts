@@ -7,3 +7,8 @@ export const getMyCompany = async (userId: string) => {
     return null
   }
 }
+
+export const getCompanies = (filter?: string) =>
+  pb.collection('companies').getFullList({ filter, sort: '-created' })
+
+export const deleteCompany = (id: string) => pb.collection('companies').delete(id)
