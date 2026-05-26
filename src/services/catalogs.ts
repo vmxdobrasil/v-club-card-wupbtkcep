@@ -1,60 +1,35 @@
 import pb from '@/lib/pocketbase/client'
-import { Company } from './companies'
-import { Product } from './products'
+import { RecordModel } from 'pocketbase'
 
-export interface Catalog {
-  id: string
-  name: string
+export interface Catalog extends RecordModel {
+  title: string
+  description: string
+  banner: string
   company_id: string
-  slug: string
-  is_promotional: boolean
+  product_ids: string[]
   status: 'active' | 'inactive'
-  created: string
-  updated: string
-  expand?: {
-    company_id?: Company
-  }
+  slug: string
 }
 
-export interface CatalogItem {
-  id: string
-  product_id: string
-  catalog_id: string
-  created: string
-  updated: string
-  expand?: {
-    product_id?: Product
-    catalog_id?: Catalog
-  }
-}
-
-export const getCatalogs = () =>
-  pb.collection('catalogs').getFullList<Catalog>({ expand: 'company_id', sort: '-created' })
-export const getCompanyCatalogs = (companyId: string) =>
+export const getCatalogs = (companyId?: string) =>
   pb.collection('catalogs').getFullList<Catalog>({
-    filter: `company_id = '${companyId}'`,
-    expand: 'company_id',
+    filter: companyId ? `company_id = '${companyId}'` : '',
     sort: '-created',
   })
-export const getCatalog = (id: string) =>
-  pb.collection('catalogs').getOne<Catalog>(id, { expand: 'company_id' })
-export const getCatalogBySlug = async (slug: string) => {
-  return pb
-    .collection('catalogs')
-    .getFirstListItem<Catalog>(`slug = '${slug}'`, { expand: 'company_id' })
-}
-export const createCatalog = (data: Partial<Catalog>) =>
-  pb.collection('catalogs').create<Catalog>(data)
-export const updateCatalog = (id: string, data: Partial<Catalog>) =>
-  pb.collection('catalogs').update<Catalog>(id, data)
-export const deleteCatalog = (id: string) => pb.collection('catalogs').delete(id)
 
-export const getCatalogItems = (catalogId: string) =>
-  pb.collection('catalog_items').getFullList<CatalogItem>({
-    filter: `catalog_id = '${catalogId}'`,
-    expand: 'product_id,catalog_id',
-    sort: '-created',
-  })
-export const createCatalogItem = (data: Partial<CatalogItem>) =>
-  pb.collection('catalog_items').create<CatalogItem>(data)
-export const deleteCatalogItem = (id: string) => pb.collection('catalog_items').delete(id)
+export const getCatalog = (id: string) =>
+  pb.collection('catalogs').getOne<Catalog>(id, { expand: 'product_ids,company_id' })
+
+export const getCatalogBySlug = async (slug: string) => {
+  const result = await pb
+    .collection('catalogs')
+    .getFirstListItem<Catalog>(`slug = '${slug}'`, { expand: 'product_ids,company_id' })
+  return result
+}
+
+export const createCatalog = (data: FormData) => pb.collection('catalogs').create<Catalog>(data)
+
+export const updateCatalog = (id: string, data: FormData) =>
+  pb.collection('catalogs').update<Catalog>(id, data)
+
+export const deleteCatalog = (id: string) => pb.collection('catalogs').delete(id)

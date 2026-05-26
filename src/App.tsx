@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from './hooks/use-auth'
 import Layout from './components/Layout'
+import { MasterLayout } from './components/MasterLayout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import MasterDashboard from './pages/master/MasterDashboard'
@@ -32,16 +33,15 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/catalog/:slug" element={<PublicCatalogPage />} />
-            <Route path="/master" element={<MasterDashboard />} />
-            <Route
-              path="/master/companies"
-              element={<MasterCompaniesPage defaultTab="companies" />}
-            />
-            <Route path="/master/bin" element={<MasterCompaniesPage defaultTab="bins" />} />
-            <Route path="/master/partners" element={<MasterPartnersPage />} />
-            <Route path="/master/products" element={<MasterProductsPage />} />
-            <Route path="/master/catalogs" element={<MasterCatalogsPage />} />
-            <Route path="/master/catalogs/:id" element={<MasterCatalogDetailsPage />} />
+            <Route path="/master" element={<MasterLayout />}>
+              <Route index element={<MasterDashboard />} />
+              <Route path="companies" element={<MasterCompaniesPage defaultTab="companies" />} />
+              <Route path="bin" element={<MasterCompaniesPage defaultTab="bins" />} />
+              <Route path="partners" element={<MasterPartnersPage />} />
+              <Route path="products" element={<MasterProductsPage />} />
+              <Route path="catalogs" element={<MasterCatalogsPage />} />
+              <Route path="catalogs/:id" element={<MasterCatalogDetailsPage />} />
+            </Route>
             <Route path="/company" element={<CompanyDashboard />} />
             <Route path="/company/catalogs" element={<CompanyCatalogsPage />} />
             <Route path="/company/catalogs/:id" element={<CompanyCatalogDetailsPage />} />

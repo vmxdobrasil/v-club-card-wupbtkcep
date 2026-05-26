@@ -1,115 +1,116 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import {
-  getCatalog,
-  getCatalogItems,
-  deleteCatalogItem,
-  Catalog,
-  CatalogItem,
-} from '@/services/catalogs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { getCatalog, updateCatalog, Catalog } from '@/services/catalogs'
+import { getProducts, Product } from '@/services/products'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, Trash2 } from 'lucide-react'
-import { useRealtime } from '@/hooks/use-realtime'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
+import { ArrowLeft, Save } from 'lucide-react'
 
 export default function MasterCatalogDetailsPage() {
-  const { id } = useParams<{ id: string }>()
+  const { id } = useParams()
   const [catalog, setCatalog] = useState<Catalog | null>(null)
-  const [items, setItems] = useState<CatalogItem[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-
-  const loadData = async () => {
-    if (!id) return
-    try {
-      const [cat, itms] = await Promise.all([getCatalog(id), getCatalogItems(id)])
-      setCatalog(cat)
-      setItems(itms)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    loadData()
+    if (id) {
+      Promise.all([getCatalog(id), getProducts()])
+        .then(([c, p]) => {
+          setCatalog(c)
+          setSelected(c.product_ids || [])
+          setProducts(p.filter((x) => x.company_id === c.company_id))
+        })
+        .finally(() => setLoading(false))
+    }
   }, [id])
-  useRealtime('catalog_items', () => {
-    loadData()
-  })
 
-  const handleDeleteItem = async (itemId: string) => {
+  const handleToggle = (productId: string) => {
+    setSelected((prev) =>
+      prev.includes(productId) ? prev.filter((x) => x !== productId) : [...prev, productId],
+    )
+  }
+
+  const handleSave = async () => {
+    if (!catalog) return
+    setSaving(true)
     try {
-      await deleteCatalogItem(itemId)
-      toast.success('Removed from catalog')
-    } catch (error) {
-      toast.error('Failed to remove item')
+      const formData = new FormData()
+      selected.forEach((pid) => formData.append('product_ids', pid))
+      if (selected.length === 0) formData.append('product_ids', '') // allow clearing
+
+      await updateCatalog(catalog.id, formData as any)
+      toast.success('Catalog selections updated successfully.')
+    } catch (e: any) {
+      toast.error('Error updating catalog selections.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  if (loading)
-    return (
-      <div className="flex justify-center p-20">
-        <Loader2 className="animate-spin w-8 h-8 text-muted-foreground" />
-      </div>
-    )
+  if (loading) return <div>Loading...</div>
+  if (!catalog) return <div>Catalog not found.</div>
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="icon" asChild>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center gap-4 border-b pb-4">
+        <Button variant="outline" size="icon" asChild className="rounded-full">
           <Link to="/master/catalogs">
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">{catalog?.name} - Items</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{catalog.title}</h1>
+          <p className="text-gray-500 text-sm">Select products to include in this catalog.</p>
+        </div>
+        <div className="ml-auto">
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            <Save className="w-4 h-4" /> Save Selection ({selected.length})
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Products in Catalog</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.expand?.product_id?.name}</TableCell>
-                  <TableCell>${item.expand?.product_id?.price?.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item.id)}>
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                    No products in this catalog.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {products.map((p) => {
+          const isSelected = selected.includes(p.id)
+          return (
+            <div
+              key={p.id}
+              className={`border rounded-xl p-4 bg-white shadow-sm flex items-start space-x-3 transition-colors cursor-pointer ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'}`}
+              onClick={() => handleToggle(p.id)}
+            >
+              <Checkbox
+                id={`chk-${p.id}`}
+                checked={isSelected}
+                onCheckedChange={() => handleToggle(p.id)}
+                className="mt-1"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <div className="space-y-1.5 flex-1 leading-none">
+                <label
+                  htmlFor={`chk-${p.id}`}
+                  className="font-semibold text-gray-900 cursor-pointer block"
+                >
+                  {p.name}
+                </label>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm font-medium text-primary">${p.price.toFixed(2)}</span>
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    {p.category}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {products.length === 0 && (
+          <div className="col-span-full py-12 text-center text-gray-500 bg-white border rounded-xl border-dashed">
+            No products found for this company. Please add products to the inventory first.
+          </div>
+        )}
+      </div>
     </div>
   )
 }

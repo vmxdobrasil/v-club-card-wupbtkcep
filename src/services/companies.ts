@@ -1,25 +1,17 @@
 import pb from '@/lib/pocketbase/client'
+import { RecordModel } from 'pocketbase'
 
-export interface Company {
-  id: string
+export interface Company extends RecordModel {
   name: string
-  logo?: string
+  logo: string
   bin_prefix: string
   commission_rate: number
-  modality: '1' | '2' | 'both'
-  gateway_provider: 'Asaas' | 'Alternative' | 'None/Manual'
-  status: 'active' | 'inactive'
-  owner_id?: string
-  created: string
-  updated: string
+  modality: string
+  gateway_provider: string
+  status: string
+  owner_id: string
+  category: string
 }
 
-export const getCompanies = () => pb.collection('companies').getFullList<Company>()
-export const getCompany = (id: string) => pb.collection('companies').getOne<Company>(id)
-export const getMyCompany = async (userId: string) =>
-  pb.collection('companies').getFirstListItem<Company>(`owner_id="${userId}"`)
-export const createCompany = (data: Partial<Company>) =>
-  pb.collection('companies').create<Company>(data)
-export const updateCompany = (id: string, data: Partial<Company>) =>
-  pb.collection('companies').update<Company>(id, data)
-export const deleteCompany = (id: string) => pb.collection('companies').delete(id)
+export const getCompanies = () =>
+  pb.collection('companies').getFullList<Company>({ sort: '-created' })
