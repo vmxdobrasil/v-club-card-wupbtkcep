@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
 import { Plus, Eye } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
@@ -28,18 +31,20 @@ import {
 import { Label } from '@/components/ui/label'
 import { getCatalogs, createCatalog, deleteCatalog } from '@/services/catalogs'
 import { getCompanies } from '@/services/companies'
-import { Link } from 'react-router-dom'
 
 export default function MasterCatalogsPage() {
+  const [searchParams] = useSearchParams()
+  const initialCompany = searchParams.get('company') || 'all'
   const [catalogs, setCatalogs] = useState<any[]>([])
   const [companies, setCompanies] = useState<any[]>([])
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all')
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(initialCompany)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
     name: '',
+    description: '',
     company_id: '',
     status: 'active',
   })
@@ -47,6 +52,10 @@ export default function MasterCatalogsPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useRealtime('catalogs', () => {
+    loadData()
+  })
 
   const loadData = async () => {
     try {
@@ -74,7 +83,7 @@ export default function MasterCatalogsPage() {
       toast({ title: 'Sucesso', description: 'Catálogo criado com sucesso.' })
       setIsDialogOpen(false)
       loadData()
-      setFormData({ name: '', company_id: '', status: 'active' })
+      setFormData({ name: '', description: '', company_id: '', status: 'active' })
     } catch (error: any) {
       toast({ title: 'Erro', description: 'Falha ao criar catálogo.', variant: 'destructive' })
     } finally {
@@ -108,9 +117,12 @@ export default function MasterCatalogsPage() {
               <Plus className="mr-2 h-4 w-4" /> Novo Catálogo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby="dialog-description">
             <DialogHeader>
               <DialogTitle>Criar Catálogo</DialogTitle>
+              <DialogDescription id="dialog-description" className="sr-only">
+                Preencha as informações do catálogo.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -136,6 +148,13 @@ export default function MasterCatalogsPage() {
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Input
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
               <div className="space-y-2">

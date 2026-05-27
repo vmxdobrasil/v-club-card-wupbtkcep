@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Trash, ExternalLink } from 'lucide-react'
+import { Plus, Trash, ExternalLink, Share2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -16,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { getCatalog, updateCatalog } from '@/services/catalogs'
@@ -32,6 +34,10 @@ export default function MasterCatalogDetailsPage() {
   useEffect(() => {
     if (id) loadData(id)
   }, [id])
+
+  useRealtime('catalogs', () => {
+    if (id) loadData(id)
+  })
 
   const loadData = async (catalogId: string) => {
     try {
@@ -81,6 +87,18 @@ export default function MasterCatalogDetailsPage() {
           <p className="text-slate-500">Empresa: {catalog.expand?.company_id?.name}</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/catalog/${catalog.id}`)
+              toast({
+                title: 'Sucesso',
+                description: 'Link do catálogo copiado para área de transferência.',
+              })
+            }}
+          >
+            <Share2 className="w-4 h-4 mr-2" /> Compartilhar Link
+          </Button>
           <Button variant="outline" asChild>
             <a href={`/catalog/${catalog.id}`} target="_blank" rel="noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" /> Ver Catálogo Público
@@ -92,9 +110,12 @@ export default function MasterCatalogDetailsPage() {
                 <Plus className="mr-2 h-4 w-4" /> Adicionar Produto
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl" aria-describedby="dialog-description">
               <DialogHeader>
                 <DialogTitle>Adicionar Produtos ao Catálogo</DialogTitle>
+                <DialogDescription id="dialog-description" className="sr-only">
+                  Selecione os produtos para adicionar ao catálogo.
+                </DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
                 <Table>

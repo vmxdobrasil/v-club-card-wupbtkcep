@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { ShoppingCart, MessageCircle, X } from 'lucide-react'
+import { ShoppingCart, MessageCircle, X, Share2, Facebook, Instagram, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -111,6 +111,38 @@ export default function PublicCatalogPage() {
         {catalog.expand?.company_id?.name && (
           <p className="text-slate-500 mt-2">Oferecido por: {catalog.expand.company_id.name}</p>
         )}
+        <div className="flex justify-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const url = encodeURIComponent(window.location.href)
+              window.open(`https://wa.me/?text=Confira este catálogo: ${url}`, '_blank')
+            }}
+          >
+            <Phone className="w-4 h-4 mr-2" /> WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const url = encodeURIComponent(window.location.href)
+              window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank')
+            }}
+          >
+            <Facebook className="w-4 h-4 mr-2" /> Facebook
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href)
+              alert('Link copiado. Você pode compartilhar no Instagram!')
+            }}
+          >
+            <Share2 className="w-4 h-4 mr-2" /> Copiar Link
+          </Button>
+        </div>
       </header>
 
       <main className="container mx-auto py-8 px-4">

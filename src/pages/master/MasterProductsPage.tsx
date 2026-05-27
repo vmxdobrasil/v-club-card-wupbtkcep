@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
@@ -32,9 +35,11 @@ import { getCompanies } from '@/services/companies'
 import pb from '@/lib/pocketbase/client'
 
 export default function MasterProductsPage() {
+  const [searchParams] = useSearchParams()
+  const initialCompany = searchParams.get('company') || 'all'
   const [products, setProducts] = useState<any[]>([])
   const [companies, setCompanies] = useState<any[]>([])
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all')
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(initialCompany)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -51,6 +56,10 @@ export default function MasterProductsPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useRealtime('products', () => {
+    loadData()
+  })
 
   const loadData = async () => {
     try {
@@ -127,9 +136,12 @@ export default function MasterProductsPage() {
               <Plus className="mr-2 h-4 w-4" /> Novo Produto
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby="dialog-description">
             <DialogHeader>
               <DialogTitle>Adicionar Produto</DialogTitle>
+              <DialogDescription id="dialog-description" className="sr-only">
+                Preencha as informações do produto.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

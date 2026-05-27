@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Table,
   TableBody,
@@ -29,6 +30,7 @@ export default function MasterCompaniesPage({ defaultTab }: { defaultTab?: strin
               <TableHead>Prefixo BIN</TableHead>
               <TableHead>Comissão</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -44,11 +46,25 @@ export default function MasterCompaniesPage({ defaultTab }: { defaultTab?: strin
                     {c.status === 'active' ? 'Ativo' : 'Inativo'}
                   </span>
                 </TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Link
+                    to={`/master/products?company=${c.id}`}
+                    className="text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    Produtos
+                  </Link>
+                  <Link
+                    to={`/master/catalogs?company=${c.id}`}
+                    className="text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    Catálogos
+                  </Link>
+                </TableCell>
               </TableRow>
             ))}
             {companies.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                   Nenhuma empresa encontrada.
                 </TableCell>
               </TableRow>

@@ -19,7 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -254,9 +260,15 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
+      <DialogContent
+        className="sm:max-w-[700px] max-h-[90vh] flex flex-col"
+        aria-describedby="company-dialog-description"
+      >
         <DialogHeader>
           <DialogTitle>{company ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
+          <DialogDescription id="company-dialog-description" className="sr-only">
+            Preencha o formulário para gerenciar a empresa.
+          </DialogDescription>
         </DialogHeader>
         <CompanyHistoryModal
           companyId={company?.id || null}
