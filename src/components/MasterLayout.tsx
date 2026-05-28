@@ -1,54 +1,102 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
-import { cn } from '@/lib/utils'
-import { Store, Building, BookOpen, Package, Users, LogOut } from 'lucide-react'
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+  SidebarInset,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from '@/components/ui/sidebar'
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  CreditCard,
+  ShoppingBag,
+  FolderTree,
+} from 'lucide-react'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+const navigation = [
+  { name: 'Dashboard', href: '/master', icon: LayoutDashboard },
+  { name: 'Empresas', href: '/master/companies', icon: Building2 },
+  { name: 'Prefixos BIN', href: '/master/bin', icon: CreditCard },
+  { name: 'Parceiros', href: '/master/partners', icon: Users },
+  { name: 'Produtos', href: '/master/products', icon: ShoppingBag },
+  { name: 'Catálogos', href: '/master/catalogs', icon: FolderTree },
+]
 
 export function MasterLayout() {
-  const { signOut } = useAuth()
   const location = useLocation()
 
-  const nav = [
-    { name: 'Dashboard', path: '/master', icon: Store },
-    { name: 'Companies', path: '/master/companies', icon: Building },
-    { name: 'Products', path: '/master/products', icon: Package },
-    { name: 'Catalogs', path: '/master/catalogs', icon: BookOpen },
-    { name: 'Partners', path: '/master/partners', icon: Users },
-  ]
+  const currentItem = navigation.find((item) =>
+    item.href === '/master'
+      ? location.pathname === '/master'
+      : location.pathname.startsWith(item.href),
+  )
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="w-64 bg-white border-r flex flex-col">
-        <div className="p-5 border-b font-bold text-xl text-primary">V Club Master</div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {nav.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm font-medium',
-                location.pathname === item.path
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'hover:bg-muted text-gray-700',
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-            </Link>
-          ))}
-        </div>
-        <div className="p-4 border-t">
-          <button
-            onClick={signOut}
-            className="flex items-center gap-3 text-red-600 w-full px-3 py-2 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
-          >
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-8">
-        <Outlet />
-      </div>
-    </div>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="h-16 flex items-center px-4 border-b">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-lg">V Club Master</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Administração Global</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navigation.map((item) => {
+                  const isActive =
+                    item.href === '/master'
+                      ? location.pathname === '/master'
+                      : location.pathname.startsWith(item.href)
+
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
+                        <Link to={item.href}>
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="h-16 border-b flex items-center justify-between px-6 bg-background">
+          <div className="flex items-center gap-4">
+            <h1 className="font-semibold text-lg">{currentItem?.name || 'Dashboard'}</h1>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>Nível 0 - Acesso Master</span>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto bg-muted/10 p-6">
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
