@@ -1,22 +1,33 @@
-import { Card, CardContent } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CreditCard } from '@/components/CreditCard'
-import { QrCode, ShoppingCart, Coffee, Activity, ChevronRight, Loader2 } from 'lucide-react'
-import { Progress } from '@/components/ui/progress'
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { QRCodeDisplay } from '@/components/QRCodeDisplay'
+import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
-import { useEffect, useState } from 'react'
-import { getMyCardHolder } from '@/services/card_holders'
-import { getMyTransactions } from '@/services/transactions'
-import { useRealtime } from '@/hooks/use-realtime'
+import useRealtime from '@/hooks/use-realtime'
+import pb from '@/lib/pocketbase/client'
+import { format } from 'date-fns'
+import { CreditCard, Wallet, Receipt, Loader2, ExternalLink } from 'lucide-react'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function HolderDashboard() {
   const { user } = useAuth()
@@ -27,14 +38,20 @@ export default function HolderDashboard() {
   const loadData = async () => {
     if (!user) return
     try {
-      const h = await getMyCardHolder(user.id)
-      setHolder(h)
-      if (h) {
-        const txs = await getMyTransactions(h.id)
-        setTransactions(txs)
-      }
-    } catch (e) {
-      console.error(e)
+      const holderRes = await pb
+        .collection('card_holders')
+        .getFirstListItem(`user_id="${user.id}"`, {
+          expand: 'company_id',
+        })
+      setHolder(holderRes)
+
+      const txs = await pb.collection('transactions').getList(1, 50, {
+        filter: `holder_id="${holderRes.id}"`,
+        sort: '-created',
+      })
+      setTransactions(txs.items)
+    } catch (err) {
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -44,169 +61,270 @@ export default function HolderDashboard() {
     loadData()
   }, [user])
 
-  useRealtime('card_holders', (e) => {
-    if (e.record.id === holder?.id) {
-      setHolder(e.record)
+  useRealtime('transactions', (e) => {
+    if (holder && e.record.holder_id === holder.id) {
+      loadData()
     }
   })
 
-  useRealtime('transactions', (e) => {
-    if (e.record.holder_id === holder?.id) {
+  useRealtime('card_holders', (e) => {
+    if (holder && e.record.id === holder.id) {
       loadData()
     }
   })
 
   if (loading)
     return (
-      <div className="flex justify-center p-10">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin h-8 w-8 text-primary" />
       </div>
     )
 
   if (!holder)
-    return <div className="p-10 text-center text-muted-foreground">Nenhum cartão encontrado.</div>
+    return (
+      <div className="p-8">
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">Você ainda não possui um cartão vinculado.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
 
-  const limitTotal = holder.total_limit || 0
-  const limitUsed = holder.used_limit || 0
-  const limitAvailable = limitTotal - limitUsed
-  const percentUsed = limitTotal > 0 ? (limitUsed / limitTotal) * 100 : 0
+  const availableLimit = holder.total_limit - holder.used_limit
 
   return (
-    <div className="space-y-6 animate-fade-in-up pb-10">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">
-            Olá, {user?.name.split(' ')[0]}!
-          </h2>
-          <p className="text-muted-foreground text-sm">Sua fatura fecha em 05/06</p>
-        </div>
+    <div className="p-8 max-w-6xl mx-auto space-y-8">
+      <h1 className="text-3xl font-bold">Meu Cartão</h1>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card className="bg-primary text-primary-foreground border-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" /> V Club Card
+            </CardTitle>
+            <CardDescription className="text-primary-foreground/80">
+              {holder.expand?.company_id?.name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-mono tracking-widest mb-4">
+              {holder.card_number
+                ? holder.card_number.replace(/(.{4})/g, '$1 ').trim()
+                : '**** **** **** ****'}
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>
+                Validade: {holder.expiry ? format(new Date(holder.expiry), 'MM/yy') : '--/--'}
+              </span>
+              <span>CVV: {holder.cvv || '***'}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5" /> Limites
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Disponível</span>
+                <span className="font-medium">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                    availableLimit,
+                  )}
+                </span>
+              </div>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, (availableLimit / holder.total_limit) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-between text-sm border-t pt-2">
+              <span className="text-muted-foreground">
+                Total:{' '}
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                  holder.total_limit,
+                )}
+              </span>
+              <span className="text-muted-foreground">
+                Usado:{' '}
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                  holder.used_limit,
+                )}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" /> Ações
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <SimulateTransactionDialog holder={holder} onComplete={loadData} />
+          </CardContent>
+        </Card>
       </div>
 
-      <Carousel className="w-full max-w-sm mx-auto">
-        <CarouselContent>
-          <CarouselItem>
-            <CreditCard
-              name={user?.name?.toUpperCase() || 'PORTADOR'}
-              number={holder.card_number.replace(/(.{4})/g, '$1 ').trim()}
-              expiry={
-                holder.expiry
-                  ? new Date(holder.expiry).toLocaleDateString('pt-BR', {
-                      month: '2-digit',
-                      year: '2-digit',
-                    })
-                  : '12/29'
-              }
-              cvv={holder.cvv}
-              type="virtual"
-            />
-          </CarouselItem>
-          <CarouselItem>
-            <CreditCard
-              name={user?.name?.toUpperCase() || 'PORTADOR'}
-              number={holder.card_number.replace(/(.{4})/g, '$1 ').trim()}
-              expiry={
-                holder.expiry
-                  ? new Date(holder.expiry).toLocaleDateString('pt-BR', {
-                      month: '2-digit',
-                      year: '2-digit',
-                    })
-                  : '12/29'
-              }
-              cvv={holder.cvv}
-              type="physical"
-            />
-          </CarouselItem>
-        </CarouselContent>
-      </Carousel>
-
-      <Card className="border-none shadow-elevation bg-card">
-        <CardContent className="pt-6">
-          <div className="flex justify-between items-end mb-3">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Limite Disponível</p>
-              <h3 className="text-3xl font-bold text-success tracking-tight">
-                R$ {limitAvailable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </h3>
-            </div>
-          </div>
-          <Progress
-            value={percentUsed}
-            className="h-2.5 mb-2 bg-muted rounded-full overflow-hidden [&>div]:bg-primary"
-          />
-          <div className="flex justify-between text-xs font-medium text-muted-foreground">
-            <span>Utilizado: R$ {limitUsed.toLocaleString()}</span>
-            <span>Total: R$ {limitTotal.toLocaleString()}</span>
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Transações</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ação / Ref</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    Nenhuma transação encontrada.
+                  </TableCell>
+                </TableRow>
+              )}
+              {transactions.map((tx) => (
+                <TableRow key={tx.id}>
+                  <TableCell>{format(new Date(tx.created), 'dd/MM/yyyy HH:mm')}</TableCell>
+                  <TableCell>
+                    <Badge variant={tx.type === 'credit' ? 'default' : 'secondary'}>
+                      {tx.type === 'credit' ? 'Crédito' : 'Débito'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className={tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}>
+                    {tx.type === 'credit' ? '+' : '-'}{' '}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                      tx.amount,
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        tx.status === 'approved'
+                          ? 'default'
+                          : tx.status === 'rejected'
+                            ? 'destructive'
+                            : 'outline'
+                      }
+                    >
+                      {tx.status === 'approved'
+                        ? 'Aprovado'
+                        : tx.status === 'rejected'
+                          ? 'Rejeitado'
+                          : 'Pendente'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {tx.status === 'pending' && tx.split_data?.payment_url ? (
+                      <Button variant="link" size="sm" className="h-auto p-0 text-blue-600" asChild>
+                        <a href={tx.split_data.payment_url} target="_blank" rel="noreferrer">
+                          Pagar Fatura <ExternalLink className="w-3 h-3 ml-1" />
+                        </a>
+                      </Button>
+                    ) : tx.gateway_ref ? (
+                      <span className="text-xs text-muted-foreground" title={tx.gateway_ref}>
+                        Ref: {tx.gateway_ref.split('-')[0]}...
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="h-20 rounded-2xl flex flex-col items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md">
-              <QrCode className="h-6 w-6" />
-              <span className="text-xs font-semibold">Pagar com QR Code</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md flex flex-col items-center justify-center py-10 rounded-3xl">
-            <DialogHeader>
-              <DialogTitle className="text-center text-xl">Apresente no caixa</DialogTitle>
-            </DialogHeader>
-            <QRCodeDisplay />
-          </DialogContent>
-        </Dialog>
-        <Button
-          variant="outline"
-          className="h-20 rounded-2xl flex flex-col items-center justify-center gap-2 border-border shadow-sm bg-card hover:bg-accent"
-        >
-          <ShoppingCart className="h-6 w-6 text-primary" />
-          <span className="text-xs font-semibold">Rede Parceira</span>
-        </Button>
-      </div>
-
-      <div className="mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold text-lg text-primary">Últimas Transações</h3>
-          <Button variant="link" className="text-xs text-primary p-0 h-auto font-semibold">
-            Ver todas
-          </Button>
-        </div>
-        <div className="space-y-3">
-          {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="flex items-center justify-between p-4 rounded-2xl bg-card border shadow-sm cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center">
-                  <ShoppingCart className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm text-foreground">
-                    {tx.expand?.partner_id?.name || 'Compra'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {new Date(tx.created).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`font-bold text-sm ${tx.type === 'credit' ? 'text-emerald-500' : ''}`}
-                >
-                  {tx.type === 'credit' ? '+' : '-'} R$ {tx.amount.toFixed(2).replace('.', ',')}
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50" />
-              </div>
-            </div>
-          ))}
-          {transactions.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma transação recente.
-            </p>
-          )}
-        </div>
-      </div>
     </div>
+  )
+}
+
+function SimulateTransactionDialog({
+  holder,
+  onComplete,
+}: {
+  holder: any
+  onComplete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSimulate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await pb.collection('transactions').create({
+        holder_id: holder.id,
+        company_id: holder.company_id,
+        amount: Number(amount),
+        type: 'debit',
+        status: 'pending',
+      })
+      toast.success('Transação registrada! Caso utilize Asaas, a cobrança foi gerada com sucesso.')
+      setOpen(false)
+      setAmount('')
+      onComplete()
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full justify-start">
+          Simular Compra
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Simular Compra</DialogTitle>
+          <DialogDescription>
+            Crie uma transação de débito para simular a integração com o gateway configurado.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSimulate}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Valor (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="100.00"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Processar Pagamento
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
