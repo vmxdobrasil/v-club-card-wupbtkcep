@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-27T11:51:42.914Z",
+  "generatedAt": "2026-05-28T13:07:05.148Z",
   "collections": [
     {
       "name": "users",
@@ -127,6 +127,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "asaas_wallet_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -212,6 +218,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "asaas_customer_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_card_holders_number ON card_holders (card_number)"]

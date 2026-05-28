@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Image as ImageIcon } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -11,235 +9,224 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { getCompanyProducts, createProduct, deleteProduct } from '@/services/products'
-import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
+import useRealtime from '@/hooks/use-realtime'
+import pb from '@/lib/pocketbase/client'
+import { format } from 'date-fns'
+import { Loader2, Activity, Users, SplitSquareHorizontal } from 'lucide-react'
 
 export default function CompanyDashboard() {
   const { user } = useAuth()
-  const [products, setProducts] = useState<any[]>([])
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { toast } = useToast()
+  const [company, setCompany] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [stats, setStats] = useState({ holders: 0, volume: 0 })
+  const [loading, setLoading] = useState(true)
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    stock_status: 'in_stock',
-  })
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [companyId, setCompanyId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (user) {
-      pb.collection('companies')
-        .getFirstListItem(`owner_id = '${user.id}'`)
-        .then((comp) => {
-          setCompanyId(comp.id)
-          loadData(comp.id)
-        })
-        .catch(() =>
-          toast({ title: 'Aviso', description: 'Nenhuma empresa associada encontrada.' }),
-        )
-    }
-  }, [user])
-
-  const loadData = async (cid: string) => {
+  const loadData = async () => {
+    if (!user) return
     try {
-      const prods = await getCompanyProducts(cid)
-      setProducts(prods)
-    } catch (error: any) {
-      toast({ title: 'Erro', description: 'Erro ao carregar produtos.', variant: 'destructive' })
-    }
-  }
+      const companyRes = await pb.collection('companies').getFirstListItem(`owner_id="${user.id}"`)
+      setCompany(companyRes)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!companyId) return
-    if (!formData.name || !formData.price) {
-      toast({
-        title: 'Validação',
-        description: 'Nome e Preço são obrigatórios.',
-        variant: 'destructive',
+      const txs = await pb.collection('transactions').getList(1, 50, {
+        filter: `company_id="${companyRes.id}"`,
+        sort: '-created',
+        expand: 'holder_id.user_id',
       })
-      return
-    }
-    setLoading(true)
-    try {
-      const data = new FormData()
-      data.append('name', formData.name)
-      data.append('description', formData.description)
-      data.append('price', formData.price)
-      data.append('company_id', companyId)
-      data.append('stock_status', formData.stock_status)
-      if (imageFile) data.append('image', imageFile)
+      setTransactions(txs.items)
 
-      await createProduct(data)
-      toast({ title: 'Sucesso', description: 'Produto criado com sucesso.' })
-      setIsDialogOpen(false)
-      loadData(companyId)
-      setFormData({ name: '', description: '', price: '', stock_status: 'in_stock' })
-      setImageFile(null)
-    } catch (error: any) {
-      toast({ title: 'Erro', description: 'Falha ao criar produto.', variant: 'destructive' })
+      const holdersCount = await pb.collection('card_holders').getList(1, 1, {
+        filter: `company_id="${companyRes.id}"`,
+        $autoCancel: false,
+      })
+
+      const approvedTxs = txs.items.filter((t) => t.status === 'approved' && t.type === 'debit')
+      const volume = approvedTxs.reduce((acc, t) => acc + t.amount, 0)
+
+      setStats({
+        holders: holdersCount.totalItems,
+        volume,
+      })
+    } catch (err) {
+      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Deseja excluir este produto?')) return
-    try {
-      await deleteProduct(id)
-      toast({ title: 'Sucesso', description: 'Produto excluído.' })
-      if (companyId) loadData(companyId)
-    } catch {
-      toast({ title: 'Erro', description: 'Erro ao excluir.', variant: 'destructive' })
+  useEffect(() => {
+    loadData()
+  }, [user])
+
+  useRealtime('transactions', (e) => {
+    if (company && e.record.company_id === company.id) {
+      loadData()
     }
-  }
+  })
+
+  if (loading)
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin h-8 w-8 text-primary" />
+      </div>
+    )
+
+  if (!company)
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-bold">Empresa não encontrada.</h2>
+      </div>
+    )
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Meus Produtos</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button disabled={!companyId}>
-              <Plus className="mr-2 h-4 w-4" /> Novo Produto
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Produto</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Preço</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Estoque</Label>
-                  <Select
-                    value={formData.stock_status}
-                    onValueChange={(v) => setFormData({ ...formData, stock_status: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="in_stock">Em Estoque</SelectItem>
-                      <SelectItem value="out_of_stock">Esgotado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Imagem</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                Salvar
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard - {company.name}</h1>
+        <p className="text-muted-foreground mt-2">
+          Gateway configurado: <Badge variant="outline">{company.gateway_provider}</Badge>
+          {company.gateway_provider === 'Asaas' && company.commission_rate && (
+            <span className="ml-2 text-sm">
+              Taxa Split Plataforma: {(company.commission_rate * 100).toFixed(0)}%
+            </span>
+          )}
+        </p>
       </div>
 
-      <div className="bg-white rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Imagem</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>Preço</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell>
-                  {product.image ? (
-                    <img
-                      src={pb.files.getURL(product, product.image, { thumb: '100x100' })}
-                      className="w-10 h-10 object-cover rounded"
-                      alt=""
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-slate-100 flex items-center justify-center rounded">
-                      <ImageIcon className="text-slate-400 w-5 h-5" />
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>R$ {product.price?.toFixed(2) || '0.00'}</TableCell>
-                <TableCell>
-                  {product.stock_status === 'in_stock' ? 'Estoque' : 'Esgotado'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-500"
-                    onClick={() => handleDelete(product.id)}
-                  >
-                    Excluir
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {products.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                  Nenhum produto encontrado.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Portadores Ativos</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.holders}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Volume Transacionado</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                stats.volume,
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Em transações de débito aprovadas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Comissões Retidas (Estimativa)</CardTitle>
+            <SplitSquareHorizontal className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                stats.volume * (company.commission_rate || 0.01),
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Destinado à plataforma através de Split</p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transações Recentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Portador</TableHead>
+                <TableHead>Valor Bruto</TableHead>
+                <TableHead>Líquido Empresa</TableHead>
+                <TableHead>Comissão Split</TableHead>
+                <TableHead>Gateway / Ref</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Nenhuma transação encontrada.
+                  </TableCell>
+                </TableRow>
+              )}
+              {transactions.map((tx) => {
+                const holderName = tx.expand?.holder_id?.expand?.user_id?.name || 'Desconhecido'
+                const net = tx.split_data?.net || tx.amount
+                const commission = tx.split_data?.commission || 0
+
+                return (
+                  <TableRow key={tx.id}>
+                    <TableCell>{format(new Date(tx.created), 'dd/MM/yyyy HH:mm')}</TableCell>
+                    <TableCell>{holderName}</TableCell>
+                    <TableCell className="font-medium">
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(tx.amount)}
+                    </TableCell>
+                    <TableCell className="text-green-600">
+                      {tx.type === 'debit'
+                        ? new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(net)
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-amber-600">
+                      {tx.type === 'debit' && commission > 0
+                        ? new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(commission)
+                        : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {tx.split_data?.provider === 'Asaas' ? (
+                        <div className="flex flex-col text-xs">
+                          <span className="font-semibold text-blue-600">Asaas</span>
+                          <span
+                            className="text-muted-foreground truncate max-w-[120px]"
+                            title={tx.gateway_ref}
+                          >
+                            {tx.gateway_ref || 'N/A'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Interno</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          tx.status === 'approved'
+                            ? 'default'
+                            : tx.status === 'rejected'
+                              ? 'destructive'
+                              : 'outline'
+                        }
+                      >
+                        {tx.status === 'approved'
+                          ? 'Aprovado'
+                          : tx.status === 'rejected'
+                            ? 'Rejeitado'
+                            : 'Pendente'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }
