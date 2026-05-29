@@ -1,98 +1,110 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarRail,
-  SidebarInset,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarTrigger,
 } from '@/components/ui/sidebar'
-import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  CreditCard,
-  ShoppingBag,
-  FolderTree,
-} from 'lucide-react'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-
-const navigation = [
-  { name: 'Dashboard', href: '/master', icon: LayoutDashboard },
-  { name: 'Empresas', href: '/master/companies', icon: Building2 },
-  { name: 'Prefixos BIN', href: '/master/bin', icon: CreditCard },
-  { name: 'Parceiros', href: '/master/partners', icon: Users },
-  { name: 'Produtos', href: '/master/products', icon: ShoppingBag },
-  { name: 'Catálogos', href: '/master/catalogs', icon: FolderTree },
-]
+import { Building2, CreditCard, Users, Package, BookOpen, LayoutDashboard } from 'lucide-react'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg'
 
 export function MasterLayout() {
   const location = useLocation()
 
-  const currentItem = navigation.find((item) =>
-    item.href === '/master'
-      ? location.pathname === '/master'
-      : location.pathname.startsWith(item.href),
-  )
+  const isActive = (path: string) => location.pathname === path
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader className="h-16 flex items-center px-4 border-b justify-center">
-          <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Administração Global</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navigation.map((item) => {
-                  const isActive =
-                    item.href === '/master'
-                      ? location.pathname === '/master'
-                      : location.pathname.startsWith(item.href)
-
-                  return (
-                    <SidebarMenuItem key={item.name}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
-                        <Link to={item.href}>
-                          <item.icon className="w-4 h-4" />
-                          <span>{item.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset>
-        <header className="h-16 border-b flex items-center justify-between px-6 bg-background">
-          <div className="flex items-center gap-4">
-            <h1 className="font-semibold text-lg">{currentItem?.name || 'Dashboard'}</h1>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Nível 0 - Acesso Master</span>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto bg-muted/10 p-6">
-          <ErrorBoundary>
+      <div className="flex h-screen w-full bg-background overflow-hidden">
+        <Sidebar className="border-r border-border/50 bg-sidebar">
+          <SidebarHeader className="p-4 border-b border-border/50 flex justify-center items-center">
+            <Link
+              to="/master"
+              className="block w-full max-w-[200px] transition-transform hover:scale-[1.02]"
+            >
+              <img
+                src={cardImage}
+                alt="V Club Card"
+                className="w-full h-auto object-contain rounded-xl shadow-sm"
+              />
+            </Link>
+          </SidebarHeader>
+          <SidebarContent className="p-3">
+            <SidebarMenu className="gap-1.5">
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/master')} tooltip="Dashboard">
+                  <Link to="/master">
+                    <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive('/master/companies')}
+                  tooltip="Companies"
+                >
+                  <Link to="/master/companies">
+                    <Building2 className="w-4 h-4 mr-2" /> Companies
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/master/bin')} tooltip="BIN Prefix">
+                  <Link to="/master/bin">
+                    <CreditCard className="w-4 h-4 mr-2" /> BIN Prefix
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive('/master/partners')}
+                  tooltip="Partners"
+                >
+                  <Link to="/master/partners">
+                    <Users className="w-4 h-4 mr-2" /> Partners
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive('/master/products')}
+                  tooltip="Products"
+                >
+                  <Link to="/master/products">
+                    <Package className="w-4 h-4 mr-2" /> Products
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive('/master/catalogs')}
+                  tooltip="Catalogs"
+                >
+                  <Link to="/master/catalogs">
+                    <BookOpen className="w-4 h-4 mr-2" /> Catalogs
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+        <div className="flex flex-col flex-1 overflow-hidden relative">
+          <header className="h-16 flex items-center px-4 border-b border-border/50 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+            <SidebarTrigger className="-ml-2" />
+          </header>
+          <main className="flex-1 overflow-y-auto bg-muted/20 p-6">
             <Outlet />
-          </ErrorBoundary>
-        </main>
-      </SidebarInset>
+          </main>
+        </div>
+      </div>
     </SidebarProvider>
   )
 }
