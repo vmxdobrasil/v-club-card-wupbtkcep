@@ -1,16 +1,38 @@
 import pb from '@/lib/pocketbase/client'
+import type { RecordModel } from 'pocketbase'
 
-export const getCompanies = () => pb.collection('companies').getFullList({ sort: '-created' })
+export interface Company extends RecordModel {
+  name: string
+  logo?: string
+  bin_prefix: string
+  commission_rate: number
+  modality: '1' | '2' | 'both'
+  gateway_provider: 'Asaas' | 'Alternative' | 'None/Manual'
+  status: 'active' | 'inactive'
+  owner_id?: string
+  cnpj?: string
+  address?: string
+  zip_code?: string
+  phone?: string
+  responsible_name?: string
+}
 
-export const getCompany = (id: string) => pb.collection('companies').getOne(id)
+export const getCompanies = async () => {
+  return pb.collection<Company>('companies').getFullList({ sort: '-created' })
+}
 
-export const createCompany = (data: any) => pb.collection('companies').create(data)
+export const getCompany = async (id: string) => {
+  return pb.collection<Company>('companies').getOne(id)
+}
 
-export const updateCompany = (id: string, data: any) => pb.collection('companies').update(id, data)
+export const createCompany = async (data: Partial<Company>) => {
+  return pb.collection<Company>('companies').create(data)
+}
 
-export const deleteCompany = (id: string) => pb.collection('companies').delete(id)
+export const updateCompany = async (id: string, data: Partial<Company>) => {
+  return pb.collection<Company>('companies').update(id, data)
+}
 
-export const getMyCompany = async () => {
-  if (!pb.authStore.record?.id) throw new Error('User not authenticated')
-  return pb.collection('companies').getFirstListItem(`owner_id = '${pb.authStore.record.id}'`)
+export const deleteCompany = async (id: string) => {
+  return pb.collection('companies').delete(id)
 }

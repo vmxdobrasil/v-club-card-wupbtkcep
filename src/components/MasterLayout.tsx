@@ -1,105 +1,78 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
-import {
-  Building2,
-  Users,
-  ShoppingBag,
-  LayoutDashboard,
-  Trash2,
-  Library,
-  LogOut,
-  CreditCard,
-} from 'lucide-react'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
+import {
+  LogOut,
+  Building,
+  CreditCard,
+  Users,
+  Box,
+  BookOpen,
+  Trash2,
+  LayoutDashboard,
+} from 'lucide-react'
 
 export function MasterLayout() {
+  const { signOut } = useAuth()
   const location = useLocation()
-  const { signOut, user } = useAuth()
 
-  const navigation = [
-    { name: 'Dashboard', href: '/master', icon: LayoutDashboard },
-    { name: 'Empresas', href: '/companies', icon: Building2 },
-    { name: 'BINs', href: '/bin', icon: CreditCard },
-    { name: 'Parceiros', href: '/partners', icon: Users },
-    { name: 'Produtos', href: '/products', icon: ShoppingBag },
-    { name: 'Catálogos', href: '/catalogos', icon: Library },
-    { name: 'Usuários', href: '/usuarios', icon: Users },
-    { name: 'Lixeira', href: '/lixeira', icon: Trash2 },
+  const navItems = [
+    { name: 'Dashboard', path: '/master', icon: LayoutDashboard },
+    { name: 'Empresas', path: '/companies', icon: Building },
+    { name: 'Parceiros', path: '/partners', icon: Users },
+    { name: 'Produtos', path: '/products', icon: Box },
+    { name: 'Catálogos', path: '/catalogos', icon: BookOpen },
+    { name: 'Usuários', path: '/usuarios', icon: Users },
+    { name: 'Lixeira', path: '/lixeira', icon: Trash2 },
   ]
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-slate-50">
-        <Sidebar>
-          <SidebarHeader className="h-16 flex items-center px-4 border-b">
-            <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-              <img
-                src={cardImage}
-                alt="V Club Card"
-                className="h-8 w-auto rounded object-contain"
-              />
-              <span className="truncate">V Club Card</span>
-            </Link>
-          </SidebarHeader>
-          <SidebarContent className="py-4">
-            <SidebarMenu>
-              {navigation.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      location.pathname === item.href ||
-                      location.pathname.startsWith(`${item.href}/`)
-                    }
-                  >
-                    <Link to={item.href} className="flex items-center gap-3 px-4 py-2">
-                      <item.icon className="size-5" />
-                      <span>{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter className="border-t p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col overflow-hidden mr-2">
-                <span className="text-sm font-medium truncate">
-                  {user?.name || 'Administrador'}
-                </span>
-                <span className="text-xs text-slate-500 truncate">{user?.email}</span>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => signOut()} title="Sair">
-                <LogOut className="size-4 shrink-0" />
-              </Button>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
-
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <header className="h-16 flex items-center justify-between px-6 border-b bg-white lg:hidden">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-              <span className="font-bold">V Club Card</span>
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
-            <Outlet />
-          </main>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r flex flex-col shadow-sm">
+        <div className="p-4 border-b flex flex-col items-center justify-center min-h-[80px]">
+          <img
+            src="/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg"
+            alt="V Club Card"
+            className="h-12 object-contain"
+          />
+          <span className="text-xs font-semibold text-muted-foreground mt-2">Master Admin</span>
         </div>
-      </div>
-    </SidebarProvider>
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const isActive =
+              location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 font-medium'
+                }`}
+              >
+                <Icon size={18} />
+                <span>{item.name}</span>
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="p-4 border-t">
+          <Button variant="outline" className="w-full justify-start gap-2" onClick={signOut}>
+            <LogOut size={18} />
+            Sair
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto bg-gray-50">
+        <div className="p-8 max-w-7xl mx-auto">
+          <Outlet />
+        </div>
+      </main>
+    </div>
   )
 }
