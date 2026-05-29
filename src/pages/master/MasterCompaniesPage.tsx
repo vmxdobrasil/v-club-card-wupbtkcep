@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import {
-  getCompanies,
-  createCompany,
-  updateCompany,
-  deleteCompany,
-  type Company,
-} from '@/services/companies'
+import pb from '@/lib/pocketbase/client'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Form,
   FormControl,
@@ -19,13 +21,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -41,76 +36,43 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Building2, CreditCard, Trash2, Edit2 } from 'lucide-react'
-import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { useToast } from '@/hooks/use-toast'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, Plus, Building2 } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
-const maskCnpj = (value: string) => {
-  return value
-    .replace(/\D/g, '')
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1/$2')
-    .replace(/(\d{4})(\d)/, '$1-$2')
-    .substring(0, 18)
-}
-
-const maskCep = (value: string) => {
-  return value
-    .replace(/\D/g, '')
-    .replace(/^(\d{5})(\d)/, '$1-$2')
-    .substring(0, 9)
-}
-
-const maskPhone = (value: string) => {
-  const cleaned = value.replace(/\D/g, '')
-  if (cleaned.length <= 10) {
-    return cleaned
-      .replace(/^(\d{2})(\d)/g, '($1) $2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
-      .substring(0, 14)
-  }
-  return cleaned
-    .replace(/^(\d{2})(\d)/g, '($1) $2')
-    .replace(/(\d{5})(\d)/, '$1-$2')
-    .substring(0, 15)
-}
-
-const formSchema = z.object({
+const companySchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   bin_prefix: z.string().min(1, 'Prefixo BIN é obrigatório'),
-  commission_rate: z.coerce.number().min(0.00025).max(0.01),
+  commission_rate: z.coerce.number().min(0, 'Taxa de comissão inválida'),
   modality: z.enum(['1', '2', 'both']),
   gateway_provider: z.enum(['Asaas', 'Alternative', 'None/Manual']),
   status: z.enum(['active', 'inactive']),
-  cnpj: z.string().optional(),
-  address: z.string().optional(),
-  zip_code: z.string().optional(),
-  phone: z.string().optional(),
-  responsible_name: z.string().optional(),
+  cnpj: z.string().min(1, 'CNPJ é obrigatório'),
+  address: z.string().min(1, 'Endereço é obrigatório'),
+  zip_code: z.string().min(1, 'CEP é obrigatório'),
+  phone: z.string().min(1, 'Telefone/WhatsApp é obrigatório'),
+  responsible_name: z.string().min(1, 'Nome do Responsável é obrigatório'),
 })
 
-type FormValues = z.infer<typeof formSchema>
+type CompanyFormValues = z.infer<typeof companySchema>
 
-export default function MasterCompaniesPage({
-  defaultTab = 'companies',
-}: {
-  defaultTab?: 'companies' | 'bins'
-}) {
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [open, setOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+export default function MasterCompaniesPage({ defaultTab = 'companies' }: { defaultTab?: string }) {
+  const [companies, setCompanies] = useState<any[]>([])
+  const [binsHistory, setBinsHistory] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<CompanyFormValues>({
+    resolver: zodResolver(companySchema),
     defaultValues: {
       name: '',
       bin_prefix: '',
-      commission_rate: 0.005,
-      modality: '1',
-      gateway_provider: 'None/Manual',
+      commission_rate: 0,
+      modality: 'both',
+      gateway_provider: 'Asaas',
       status: 'active',
       cnpj: '',
       address: '',
@@ -122,15 +84,25 @@ export default function MasterCompaniesPage({
 
   const loadData = async () => {
     try {
-      const data = await getCompanies()
-      setCompanies(data)
+      setLoading(true)
+      const [comps, bins] = await Promise.all([
+        pb.collection('companies').getFullList({ sort: '-created' }),
+        pb
+          .collection('bin_prefix_history')
+          .getFullList({ sort: '-created', expand: 'company_id,changed_by' })
+          .catch(() => []),
+      ])
+      setCompanies(comps)
+      setBinsHistory(bins)
     } catch (err) {
       console.error(err)
       toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar empresas.',
         variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados.',
       })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -138,343 +110,331 @@ export default function MasterCompaniesPage({
     loadData()
   }, [])
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: CompanyFormValues) => {
     try {
-      if (editingId) {
-        await updateCompany(editingId, data)
-        toast({ title: 'Sucesso', description: 'Empresa atualizada com sucesso.' })
-      } else {
-        await createCompany(data)
-        toast({ title: 'Sucesso', description: 'Empresa cadastrada com sucesso.' })
-      }
-      setOpen(false)
+      await pb.collection('companies').create(data)
+      toast({ title: 'Sucesso', description: 'Empresa cadastrada com sucesso' })
+      setDialogOpen(false)
       form.reset()
-      setEditingId(null)
-      loadData()
-    } catch (err: any) {
-      console.error(err)
-      const errors = extractFieldErrors(err)
-      if (Object.keys(errors).length > 0) {
-        Object.keys(errors).forEach((key) => {
-          form.setError(key as any, { message: errors[key] })
-        })
-      } else {
-        toast({
-          title: 'Erro',
-          description: 'Verifique os dados informados.',
-          variant: 'destructive',
-        })
-      }
-    }
-  }
-
-  const handleEdit = (company: Company) => {
-    setEditingId(company.id)
-    form.reset({
-      name: company.name,
-      bin_prefix: company.bin_prefix,
-      commission_rate: company.commission_rate,
-      modality: company.modality,
-      gateway_provider: company.gateway_provider,
-      status: company.status,
-      cnpj: company.cnpj || '',
-      address: company.address || '',
-      zip_code: company.zip_code || '',
-      phone: company.phone || '',
-      responsible_name: company.responsible_name || '',
-    })
-    setOpen(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta empresa?')) return
-    try {
-      await deleteCompany(id)
-      toast({ title: 'Sucesso', description: 'Empresa excluída.' })
       loadData()
     } catch (err) {
-      console.error(err)
-      toast({ title: 'Erro', description: 'Não foi possível excluir.', variant: 'destructive' })
+      const fieldErrors = extractFieldErrors(err)
+      Object.keys(fieldErrors).forEach((key) => {
+        form.setError(key as any, { message: fieldErrors[key] })
+      })
+      if (Object.keys(fieldErrors).length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro',
+          description: 'Ocorreu um erro ao cadastrar a empresa.',
+        })
+      }
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Gestão de Empresas</h1>
-        <Dialog
-          open={open}
-          onOpenChange={(val) => {
-            setOpen(val)
-            if (!val) {
-              form.reset()
-              setEditingId(null)
-            }
-          }}
-        >
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Empresas</h1>
+          <p className="text-gray-500 mt-1">
+            Gerencie as empresas e seus respectivos BINs e comissões.
+          </p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" /> Nova Empresa
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Empresa
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+            <DialogHeader className="p-6 pb-2 border-b">
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Building2 className="w-5 h-5 text-primary" />
+                Cadastrar Nova Empresa
+              </DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome da Empresa *</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="cnpj"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CNPJ</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            onChange={(e) => field.onChange(maskCnpj(e.target.value))}
-                            placeholder="00.000.000/0000-00"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bin_prefix"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prefixo BIN *</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="commission_rate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Taxa de Comissão *</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.00001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="modality"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Modalidade *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <ScrollArea className="flex-1 px-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-6 pb-24">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome da Empresa</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
+                            <Input placeholder="Razão Social ou Nome Fantasia" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="1">Modalidade 1</SelectItem>
-                            <SelectItem value="2">Modalidade 2</SelectItem>
-                            <SelectItem value="both">Ambas</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="gateway_provider"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gateway *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cnpj"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CNPJ</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
+                            <Input placeholder="00.000.000/0000-00" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Asaas">Asaas</SelectItem>
-                            <SelectItem value="Alternative">Alternativo</SelectItem>
-                            <SelectItem value="None/Manual">Nenhum/Manual</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="col-span-1 md:col-span-2">
+                      <div className="w-full h-px bg-gray-100 my-2"></div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                        Contato e Endereço
+                      </h3>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="responsible_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome do Responsável</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
+                            <Input placeholder="João da Silva" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="active">Ativo</SelectItem>
-                            <SelectItem value="inactive">Inativo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefone / WhatsApp</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                            placeholder="(00) 00000-0000"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="zip_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CEP</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            onChange={(e) => field.onChange(maskCep(e.target.value))}
-                            placeholder="00000-000"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="responsible_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome do Responsável</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Endereço Completo</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Empresa'}
-                </Button>
-              </form>
-            </Form>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone / WhatsApp</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(00) 00000-0000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="zip_code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CEP</FormLabel>
+                          <FormControl>
+                            <Input placeholder="00000-000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Endereço Completo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rua das Flores, 123 - Centro" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="col-span-1 md:col-span-2">
+                      <div className="w-full h-px bg-gray-100 my-2"></div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                        Configurações Operacionais
+                      </h3>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="bin_prefix"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prefixo BIN</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: 543210" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="commission_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Taxa de Comissão (%)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="modality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Modalidade</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">Modalidade 1 (Crédito)</SelectItem>
+                              <SelectItem value="2">Modalidade 2 (Benefício)</SelectItem>
+                              <SelectItem value="both">Ambas as Modalidades</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="gateway_provider"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gateway de Pagamento</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Asaas">Asaas</SelectItem>
+                              <SelectItem value="Alternative">Alternativo</SelectItem>
+                              <SelectItem value="None/Manual">Nenhum / Manual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status da Empresa</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="active">Ativa</SelectItem>
+                              <SelectItem value="inactive">Inativa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                      className="mr-2"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
+                      Salvar Empresa
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </div>
 
       <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="companies" className="flex items-center gap-2">
-            <Building2 size={16} /> Empresas
-          </TabsTrigger>
-          <TabsTrigger value="bins" className="flex items-center gap-2">
-            <CreditCard size={16} /> Controle de BINs
-          </TabsTrigger>
+        <TabsList className="mb-6">
+          <TabsTrigger value="companies">Lista de Empresas</TabsTrigger>
+          <TabsTrigger value="bins">Histórico de BINs</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="companies" className="mt-6">
-          <div className="bg-white border rounded-md shadow-sm">
+        <TabsContent value="companies" className="outline-none">
+          <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-gray-50/50">
                 <TableRow>
-                  <TableHead>Nome</TableHead>
+                  <TableHead className="w-[300px]">Empresa</TableHead>
                   <TableHead>CNPJ</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>BIN</TableHead>
+                  <TableHead>Modalidade</TableHead>
                   <TableHead>Gateway</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {companies.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhuma empresa cadastrada.
+                    <TableCell colSpan={6} className="h-32 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                    </TableCell>
+                  </TableRow>
+                ) : companies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-gray-500">
+                      Nenhuma empresa encontrada
                     </TableCell>
                   </TableRow>
                 ) : (
                   companies.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium">{company.name}</TableCell>
-                      <TableCell>{company.cnpj || '-'}</TableCell>
+                    <TableRow key={company.id} className="group">
                       <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            company.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{company.name}</span>
+                          <span
+                            className="text-xs text-gray-500 mt-0.5 truncate max-w-[250px]"
+                            title={`${company.responsible_name} • ${company.phone}`}
+                          >
+                            {company.responsible_name} • {company.phone}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-600">{company.cnpj || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono bg-gray-50">
+                          {company.bin_prefix}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-600">
+                        {company.modality === 'both' ? 'Ambas' : `Modalidade ${company.modality}`}
+                      </TableCell>
+                      <TableCell className="text-gray-600">{company.gateway_provider}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={company.status === 'active' ? 'default' : 'secondary'}
+                          className={
+                            company.status === 'active' ? 'bg-green-500 hover:bg-green-600' : ''
+                          }
                         >
                           {company.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </TableCell>
-                      <TableCell>{company.gateway_provider}</TableCell>
-                      <TableCell>{company.phone || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(company)}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => handleDelete(company.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))
@@ -484,38 +444,57 @@ export default function MasterCompaniesPage({
           </div>
         </TabsContent>
 
-        <TabsContent value="bins" className="mt-6">
-          <div className="bg-white border rounded-md shadow-sm">
+        <TabsContent value="bins" className="outline-none">
+          <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-gray-50/50">
                 <TableRow>
+                  <TableHead>Data da Alteração</TableHead>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Prefixo BIN</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>BIN Anterior</TableHead>
+                  <TableHead>BIN Novo</TableHead>
+                  <TableHead>Responsável</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {companies.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                      Nenhuma BIN encontrada.
+                    <TableCell colSpan={5} className="h-32 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                    </TableCell>
+                  </TableRow>
+                ) : binsHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-gray-500">
+                      Nenhum registro de alteração encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
-                  companies.map((company) => (
-                    <TableRow key={`bin-${company.id}`}>
-                      <TableCell className="font-medium">{company.name}</TableCell>
-                      <TableCell className="font-mono">{company.bin_prefix}</TableCell>
+                  binsHistory.map((history) => (
+                    <TableRow key={history.id}>
+                      <TableCell className="text-gray-600">
+                        {new Date(history.created).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-medium text-gray-900">
+                        {history.expand?.company_id?.name || 'Desconhecida'}
+                      </TableCell>
                       <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            company.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
+                        <Badge variant="secondary" className="font-mono">
+                          {history.old_prefix || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="font-mono border-primary/20 text-primary bg-primary/5"
                         >
-                          {company.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </span>
+                          {history.new_prefix}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-600">
+                        {history.expand?.changed_by?.name ||
+                          history.expand?.changed_by?.email ||
+                          'Sistema'}
                       </TableCell>
                     </TableRow>
                   ))
