@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import pb from '@/lib/pocketbase/client'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -8,27 +9,42 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { getCompanies } from '@/services/companies'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 
 export default function MasterCompaniesPage({ defaultTab }: { defaultTab?: string }) {
   const [companies, setCompanies] = useState<any[]>([])
 
   useEffect(() => {
-    getCompanies()
+    pb.collection('companies')
+      .getFullList({ filter: "deleted_at = ''" })
       .then(setCompanies)
-      .catch(() => {})
+      .catch(() => toast.error('Erro ao carregar empresas'))
   }, [])
 
+  const handleSoftDelete = async (id: string) => {
+    try {
+      await pb.collection('companies').update(id, { deleted_at: new Date().toISOString() })
+      setCompanies(companies.filter((c) => c.id !== id))
+      toast.success('Empresa movida para a lixeira')
+    } catch {
+      toast.error('Erro ao excluir')
+    }
+  }
+
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Empresas (Clientes)</h1>
-      <div className="bg-white rounded-md border">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold tracking-tight">Gestão de Empresas</h2>
+        <Button>Nova Empresa</Button>
+      </div>
+
+      <div className="border rounded-md bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Prefixo BIN</TableHead>
-              <TableHead>Comissão</TableHead>
+              <TableHead>BIN Prefix</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -37,34 +53,22 @@ export default function MasterCompaniesPage({ defaultTab }: { defaultTab?: strin
             {companies.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
-                <TableCell>{c.bin_prefix}</TableCell>
-                <TableCell>{c.commission_rate}%</TableCell>
+                <TableCell className="font-mono">{c.bin_prefix}</TableCell>
                 <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}
-                  >
-                    {c.status === 'active' ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>
+                    {c.status}
+                  </Badge>
                 </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Link
-                    to={`/master/products?company=${c.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    Produtos
-                  </Link>
-                  <Link
-                    to={`/master/catalogs?company=${c.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    Catálogos
-                  </Link>
+                <TableCell className="text-right">
+                  <Button variant="destructive" size="sm" onClick={() => handleSoftDelete(c.id)}>
+                    Excluir
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
             {companies.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                   Nenhuma empresa encontrada.
                 </TableCell>
               </TableRow>

@@ -15,6 +15,7 @@ import MasterProductsPage from '@/pages/master/MasterProductsPage'
 import MasterCatalogsPage from '@/pages/master/MasterCatalogsPage'
 import MasterCatalogDetailsPage from '@/pages/master/MasterCatalogDetailsPage'
 import MasterHoldersPage from '@/pages/master/MasterHoldersPage'
+import MasterLixeiraPage from '@/pages/master/MasterLixeiraPage'
 import CompanyDashboard from '@/pages/company/CompanyDashboard'
 import CompanyCatalogsPage from '@/pages/company/CompanyCatalogsPage'
 import CompanyCatalogDetailsPage from '@/pages/company/CompanyCatalogDetailsPage'
@@ -35,35 +36,37 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/catalog/:slug" element={<PublicCatalogPage />} />
-
-            <Route path="/master" element={<MasterLayout />}>
-              <Route index element={<MasterDashboard />} />
-              <Route path="companies" element={<MasterCompaniesPage defaultTab="companies" />} />
-              <Route path="bin" element={<MasterCompaniesPage defaultTab="bins" />} />
-              <Route path="partners" element={<MasterPartnersPage />} />
-              <Route path="products" element={<MasterProductsPage />} />
-              <Route path="catalogos" element={<MasterCatalogsPage />} />
-              <Route path="catalogos/:id" element={<MasterCatalogDetailsPage />} />
-              <Route path="holders" element={<MasterHoldersPage />} />
-            </Route>
-
-            <Route path="/company" element={<DashboardLayout role="company" />}>
-              <Route index element={<CompanyDashboard />} />
-              <Route path="catalogos" element={<CompanyCatalogsPage />} />
-              <Route path="catalogos/:id" element={<CompanyCatalogDetailsPage />} />
-              <Route path="ai-agent" element={<CompanyAIAgentPage />} />
-            </Route>
-
-            <Route path="/holder" element={<DashboardLayout role="holder" />}>
-              <Route index element={<HolderDashboard />} />
-            </Route>
-
-            <Route path="/partner" element={<DashboardLayout role="partner" />}>
-              <Route index element={<PartnerDashboard />} />
-              <Route path="products" element={<PartnerProductsPage />} />
-              <Route path="catalogos" element={<PartnerCatalogsPage />} />
-            </Route>
           </Route>
+
+          <Route element={<MasterLayout />}>
+            <Route path="/companies" element={<MasterCompaniesPage defaultTab="companies" />} />
+            <Route path="/bin" element={<MasterCompaniesPage defaultTab="bins" />} />
+            <Route path="/partners" element={<MasterPartnersPage />} />
+            <Route path="/products" element={<MasterProductsPage />} />
+            <Route path="/catalogos" element={<MasterCatalogsPage />} />
+            <Route path="/catalogos/:id" element={<MasterCatalogDetailsPage />} />
+            <Route path="/usuarios" element={<MasterHoldersPage />} />
+            <Route path="/lixeira" element={<MasterLixeiraPage />} />
+            <Route path="/master" element={<MasterDashboard />} />
+          </Route>
+
+          <Route path="/company" element={<DashboardLayout role="company" />}>
+            <Route index element={<CompanyDashboard />} />
+            <Route path="catalogos" element={<CompanyCatalogsPage />} />
+            <Route path="catalogos/:id" element={<CompanyCatalogDetailsPage />} />
+            <Route path="ai-agent" element={<CompanyAIAgentPage />} />
+          </Route>
+
+          <Route path="/holder" element={<DashboardLayout role="holder" />}>
+            <Route index element={<HolderDashboard />} />
+          </Route>
+
+          <Route path="/partner" element={<DashboardLayout role="partner" />}>
+            <Route index element={<PartnerDashboard />} />
+            <Route path="products" element={<PartnerProductsPage />} />
+            <Route path="catalogos" element={<PartnerCatalogsPage />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>

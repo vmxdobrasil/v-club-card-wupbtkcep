@@ -1,82 +1,75 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Package, LayoutDashboard, LogOut, FolderOpen, Bot } from 'lucide-react'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { LogOut, LayoutDashboard, ShoppingBag, CreditCard, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-interface DashboardLayoutProps {
-  role: 'company' | 'holder' | 'partner'
-}
-
-export function DashboardLayout({ role }: DashboardLayoutProps) {
-  const { pathname } = useLocation()
+export function DashboardLayout({ role }: { role: string }) {
+  const location = useLocation()
   const { signOut } = useAuth()
 
-  const getNavItems = () => {
+  const getLinks = () => {
     if (role === 'company') {
       return [
-        { title: 'Dashboard', href: '/company', icon: LayoutDashboard },
-        { title: 'Catálogos', href: '/company/catalogos', icon: FolderOpen },
-        { title: 'AI Agent', href: '/company/ai-agent', icon: Bot },
+        { href: '/company', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/company/catalogos', label: 'Catálogos', icon: CreditCard },
+        { href: '/company/ai-agent', label: 'AI Agent', icon: Bot },
       ]
     }
     if (role === 'partner') {
       return [
-        { title: 'Dashboard', href: '/partner', icon: LayoutDashboard },
-        { title: 'Produtos', href: '/partner/products', icon: Package },
-        { title: 'Catálogos', href: '/partner/catalogos', icon: FolderOpen },
+        { href: '/partner', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/partner/products', label: 'Produtos', icon: ShoppingBag },
+        { href: '/partner/catalogos', label: 'Catálogos', icon: CreditCard },
       ]
     }
-    return [{ title: 'Dashboard', href: '/holder', icon: LayoutDashboard }]
+    if (role === 'holder') {
+      return [{ href: '/holder', label: 'Dashboard', icon: LayoutDashboard }]
+    }
+    return []
   }
-
-  const navItems = getNavItems()
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <aside className="w-64 bg-white border-r flex flex-col shadow-sm z-10">
-        <div className="p-6 border-b flex items-center justify-center bg-gray-900">
-          <img
-            src="/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg"
-            alt="Logo"
-            className="h-12 w-auto object-contain rounded"
-          />
+      <aside className="w-64 bg-white border-r flex flex-col shadow-sm z-20">
+        <div className="p-6 border-b">
+          <h2 className="text-xl font-black tracking-tight text-gray-800 capitalize">
+            {role} Portal
+          </h2>
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href || (item.href !== `/${role}` && pathname.startsWith(item.href))
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {getLinks().map((link) => {
+            const Icon = link.icon
+            const isActive = location.pathname === link.href
             return (
               <Link
-                key={item.href}
-                to={item.href}
+                key={link.href}
+                to={link.href}
                 className={cn(
-                  'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                   isActive
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                    ? 'bg-blue-50 text-blue-700 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                 )}
               >
-                <item.icon
-                  className={cn('w-5 h-5 mr-3', isActive ? 'text-white' : 'text-gray-400')}
-                />
-                {item.title}
+                <Icon className="w-[18px] h-[18px]" />
+                {link.label}
               </Link>
             )
           })}
         </nav>
         <div className="p-4 border-t bg-gray-50">
           <Button
+            onClick={signOut}
             variant="ghost"
-            onClick={() => signOut()}
-            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="w-full justify-start gap-2 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
           >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sair da Conta
+            <LogOut className="w-4 h-4" />
+            Sair
           </Button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-gray-50">
+      <main className="flex-1 overflow-auto bg-gray-50 relative">
         <Outlet />
       </main>
     </div>

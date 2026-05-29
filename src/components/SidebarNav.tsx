@@ -19,11 +19,12 @@ export function SidebarNav() {
   const links = {
     master: [
       { to: '/master', icon: LayoutDashboard, label: 'Início' },
-      { to: '/master/companies', icon: Building2, label: 'Empresas' },
-      { to: '/master/bin', icon: CreditCard, label: 'Prefixo BIN' },
-      { to: '/master/partners', icon: Users, label: 'Parceiros' },
-      { to: '/master/catalogs', icon: Store, label: 'Catálogos' },
-      { to: '/master/products', icon: Receipt, label: 'Produtos' },
+      { to: '/companies', icon: Building2, label: 'Empresas' },
+      { to: '/bin', icon: CreditCard, label: 'Lixeira' },
+      { to: '/partners', icon: Users, label: 'Parceiros' },
+      { to: '/catalogos', icon: Store, label: 'Catálogos' },
+      { to: '/products', icon: Receipt, label: 'Produtos' },
+      { to: '/holders', icon: Users, label: 'Detentores' },
     ],
     company: [
       { to: '/company', icon: LayoutDashboard, label: 'Início' },

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import pb from '@/lib/pocketbase/client'
+import cardImg from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -8,127 +10,91 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import pb from '@/lib/pocketbase/client'
-import { useRealtime } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 export default function MasterHoldersPage() {
-  const [holders, setHolders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [users, setUsers] = useState<any[]>([])
 
-  const loadHolders = async () => {
+  useEffect(() => {
+    pb.collection('card_holders')
+      .getFullList({ filter: "deleted_at = ''", expand: 'user_id' })
+      .then(setUsers)
+      .catch(() => toast.error('Erro ao carregar usuários'))
+  }, [])
+
+  const handleSoftDelete = async (id: string) => {
     try {
-      const records = await pb.collection('card_holders').getFullList({
-        expand: 'user_id,company_id',
-        sort: '-created',
-      })
-      setHolders(records)
-    } catch (error) {
-      console.error('Error loading holders:', error)
-    } finally {
-      setLoading(false)
+      await pb.collection('card_holders').update(id, { deleted_at: new Date().toISOString() })
+      setUsers(users.filter((u) => u.id !== id))
+      toast.success('Usuário movido para a lixeira')
+    } catch {
+      toast.error('Erro ao excluir')
     }
   }
 
-  useEffect(() => {
-    loadHolders()
-  }, [])
-
-  useRealtime('card_holders', () => {
-    loadHolders()
-  })
-
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Gestão de Detentores</h1>
-          <p className="text-gray-500 mt-2">
-            Visualize e gerencie os detentores de cartão cadastrados no sistema.
-          </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold tracking-tight">Gestão de Usuários</h2>
+        <Button>Novo Usuário</Button>
+      </div>
+
+      <div className="flex justify-center bg-white p-12 rounded-xl border shadow-sm">
+        <div className="relative w-[420px] h-[260px] rounded-2xl overflow-hidden shadow-2xl transition-transform hover:scale-105 duration-300">
+          <img
+            src={cardImg}
+            alt="V Club Card Background"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+          <div className="relative z-10 p-6 h-full flex flex-col justify-end text-white font-mono drop-shadow-md">
+            <div className="text-2xl tracking-widest mb-2 font-semibold">6035 8700 1234 5678</div>
+            <div className="flex justify-between text-sm opacity-90 uppercase">
+              <span>NOME DO USUÁRIO</span>
+              <span>08/28</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Detentores de Cartão</CardTitle>
-          <CardDescription>
-            Lista completa de todos os usuários com cartões vinculados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : holders.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Nenhum detentor encontrado.</p>
-            </div>
-          ) : (
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Cartão Final</TableHead>
-                    <TableHead>Limite Total</TableHead>
-                    <TableHead>Limite Usado</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {holders.map((holder) => (
-                    <TableRow key={holder.id}>
-                      <TableCell className="font-medium">
-                        {holder.expand?.user_id?.name || 'Desconhecido'}
-                      </TableCell>
-                      <TableCell>{holder.expand?.company_id?.name || '-'}</TableCell>
-                      <TableCell>
-                        {holder.card_number ? `**** ${holder.card_number.slice(-4)}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(holder.total_limit || 0)}
-                      </TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(holder.used_limit || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            holder.status === 'active'
-                              ? 'default'
-                              : holder.status === 'blocked'
-                                ? 'secondary'
-                                : 'destructive'
-                          }
-                          className={cn(
-                            holder.status === 'active' && 'bg-green-600 hover:bg-green-700',
-                          )}
-                        >
-                          {holder.status === 'active'
-                            ? 'Ativo'
-                            : holder.status === 'blocked'
-                              ? 'Bloqueado'
-                              : 'Cancelado'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="border rounded-md bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Número do Cartão</TableHead>
+              <TableHead>Limite Total</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((u) => (
+              <TableRow key={u.id}>
+                <TableCell className="font-mono">{u.card_number || 'Não definido'}</TableCell>
+                <TableCell>R$ {u.total_limit?.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant={u.status === 'active' ? 'default' : 'secondary'}>
+                    {u.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="destructive" size="sm" onClick={() => handleSoftDelete(u.id)}>
+                    Excluir
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {users.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                  Nenhum usuário ativo encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

@@ -1,77 +1,66 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import {
   Building,
-  CreditCard,
-  Package,
   Users,
+  Box,
+  ShoppingCart,
+  Trash2,
+  CreditCard,
   LayoutDashboard,
-  LogOut,
-  FolderOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/use-auth'
-import { Button } from '@/components/ui/button'
-
-const navItems = [
-  { title: 'Dashboard', href: '/master', icon: LayoutDashboard },
-  { title: 'Empresas', href: '/master/companies', icon: Building },
-  { title: 'Prefixos', href: '/master/bin', icon: CreditCard },
-  { title: 'Produtos', href: '/master/products', icon: Package },
-  { title: 'Parceiros', href: '/master/partners', icon: Users },
-  { title: 'Catálogos', href: '/master/catalogos', icon: FolderOpen },
-  { title: 'Detentores', href: '/master/holders', icon: Users },
-]
 
 export function MasterLayout() {
-  const { pathname } = useLocation()
-  const { signOut } = useAuth()
+  const location = useLocation()
+
+  const navItems = [
+    { href: '/master', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/companies', icon: Building, label: 'Empresas' },
+    { href: '/partners', icon: ShoppingCart, label: 'Empresas Parceiras' },
+    { href: '/products', icon: Box, label: 'Produtos' },
+    { href: '/catalogos', icon: CreditCard, label: 'Catálogos' },
+    { href: '/usuarios', icon: Users, label: 'Usuários' },
+    { href: '/lixeira', icon: Trash2, label: 'Lixeira' },
+  ]
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <aside className="w-64 bg-white border-r flex flex-col shadow-sm z-10">
-        <div className="p-6 border-b flex items-center justify-center bg-gray-900">
-          <img
-            src="/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg"
-            alt="Logo"
-            className="h-12 w-auto object-contain rounded"
-          />
+    <div className="flex min-h-screen bg-slate-50 font-sans">
+      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+        <div className="p-6 font-bold text-white text-2xl border-b border-slate-800 tracking-tighter flex items-center gap-2">
+          V CLUB
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 py-6 flex flex-col gap-1 px-3">
           {navItems.map((item) => {
             const isActive =
-              pathname === item.href || (item.href !== '/master' && pathname.startsWith(item.href))
+              location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
             return (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200',
+                  'px-4 py-3 flex items-center gap-3 rounded-md transition-colors font-medium',
                   isActive
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'hover:bg-slate-800 hover:text-white',
                 )}
               >
-                <item.icon
-                  className={cn('w-5 h-5 mr-3', isActive ? 'text-white' : 'text-gray-400')}
-                />
-                {item.title}
+                <item.icon className="w-5 h-5" />
+                {item.label}
               </Link>
             )
           })}
         </nav>
-        <div className="p-4 border-t bg-gray-50">
-          <Button
-            variant="ghost"
-            onClick={() => signOut()}
-            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sair da Conta
-          </Button>
-        </div>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-gray-50">
-        <Outlet />
+
+      <main className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 bg-white border-b flex items-center px-8 justify-between shrink-0 shadow-sm">
+          <h1 className="font-semibold text-slate-800">Painel de Administração</h1>
+        </header>
+        <div className="p-8 overflow-auto flex-1">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
+        </div>
       </main>
     </div>
   )

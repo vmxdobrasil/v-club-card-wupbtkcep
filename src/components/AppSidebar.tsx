@@ -30,11 +30,12 @@ export function AppSidebar() {
   const navItems = {
     master: [
       { title: 'Início', url: '/master', icon: LayoutDashboard },
-      { title: 'Prefixo BIN', url: '/master/bin', icon: CreditCard },
-      { title: 'Empresas', url: '/master/companies', icon: Store },
-      { title: 'Catálogos', url: '/master/catalogs', icon: Store },
-      { title: 'Produtos', url: '/master/products', icon: FileText },
-      { title: 'Parceiros', url: '/master/partners', icon: Users },
+      { title: 'Lixeira', url: '/bin', icon: CreditCard },
+      { title: 'Empresas', url: '/companies', icon: Store },
+      { title: 'Catálogos', url: '/catalogos', icon: Store },
+      { title: 'Produtos', url: '/products', icon: FileText },
+      { title: 'Parceiros', url: '/partners', icon: Users },
+      { title: 'Detentores', url: '/holders', icon: Users },
     ],
     company: [
       { title: 'Início', url: '/company', icon: LayoutDashboard },

@@ -1,89 +1,50 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import cardImg from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
 
-const Index = () => {
+export default function Index() {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <header className="container mx-auto px-6 py-6 flex justify-between items-center border-b border-gray-100">
-        <img
-          src="/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg"
-          alt="V Club Card Logo"
-          className="h-10 md:h-12 object-contain"
-        />
-        <nav className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            asChild
-            className="hidden sm:inline-flex text-gray-600 hover:text-gray-900"
-          >
-            <Link to="/master">Login</Link>
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
+      <header className="p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
+        <h1 className="text-3xl font-extrabold tracking-tighter text-blue-500 flex items-center gap-2">
+          V CLUB <span className="text-red-500 text-lg">CARD</span>
+        </h1>
+        <Link to="/companies">
+          <Button variant="outline" className="text-slate-900 border-white hover:bg-white/90">
+            Acessar Painel
           </Button>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Link to="/master">Entrar na Plataforma</Link>
-          </Button>
-        </nav>
+        </Link>
       </header>
 
-      <main className="flex-1 flex items-center">
-        <div className="container mx-auto px-6 py-16 md:py-24 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-8 text-center lg:text-left">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 leading-[1.1]">
-              Faz Mais Por Você
-            </h1>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              Plataforma de cartão private label e co-branded para empresas. Revolucione os
-              benefícios dos seus colaboradores com a nossa solução inteligente e integrada.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 h-14 px-8 text-lg"
-                asChild
-              >
-                <Link to="/master">Entrar na Plataforma</Link>
+      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center p-8 max-w-7xl mx-auto gap-16">
+        <div className="flex-1 space-y-8 z-10">
+          <h2 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
+            Faz mais por <span className="text-red-500">Você.</span>
+          </h2>
+          <p className="text-xl text-slate-300 max-w-lg leading-relaxed">
+            Plataforma definitiva de cartão private label e co-branded para sua empresa. Benefícios
+            exclusivos, gestão simplificada e vantagens reais.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Link to="/companies">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6 w-full sm:w-auto font-semibold shadow-lg shadow-blue-900/50">
+                Começar Agora
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto h-14 px-8 text-lg border-2"
-              >
-                Saiba Mais
-              </Button>
-            </div>
+            </Link>
           </div>
-          <div className="hidden lg:block relative">
-            <div className="absolute inset-0 bg-blue-100 rounded-3xl transform rotate-3 scale-105"></div>
+        </div>
+
+        <div className="flex-1 flex justify-center w-full max-w-lg perspective-1000">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-red-600 rounded-[2rem] blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
             <img
-              src="https://img.usecurling.com/p/800/600?q=credit%20cards&color=blue&dpr=2"
-              alt="Cartões corporativos"
-              className="relative rounded-3xl shadow-2xl object-cover"
+              src={cardImg}
+              alt="V Club Card"
+              className="relative w-full h-auto rounded-3xl shadow-2xl transform rotate-y-[-10deg] rotate-x-[5deg] hover:rotate-0 transition-transform duration-700 ease-out border border-white/10"
             />
           </div>
         </div>
       </main>
-
-      <footer className="border-t border-gray-100 py-12 mt-auto bg-gray-50">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-gray-500">
-          <div className="flex items-center mb-4 md:mb-0">
-            <img
-              src="/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg"
-              alt="V Club Card Logo"
-              className="h-8 object-contain grayscale opacity-50 mr-4"
-            />
-            <p>&copy; {new Date().getFullYear()} V Club Card. Todos os direitos reservados.</p>
-          </div>
-          <div className="flex space-x-6">
-            <Link to="#" className="hover:text-blue-600 transition-colors">
-              Termos de Uso
-            </Link>
-            <Link to="#" className="hover:text-blue-600 transition-colors">
-              Privacidade
-            </Link>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
-
-export default Index
