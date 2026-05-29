@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import {
   SidebarProvider,
   Sidebar,
@@ -14,8 +15,12 @@ import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg
 
 export function MasterLayout() {
   const location = useLocation()
+  const { user, loading } = useAuth()
 
   const isActive = (path: string) => location.pathname === path
+
+  if (loading) return null
+  if (!user || user.role !== 'master') return <Navigate to="/" replace />
 
   return (
     <SidebarProvider>

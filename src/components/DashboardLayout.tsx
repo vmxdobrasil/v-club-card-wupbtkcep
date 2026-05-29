@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import {
   SidebarProvider,
   Sidebar,
@@ -9,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { LayoutDashboard, BookOpen, Bot, Package, CreditCard } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Bot, Package } from 'lucide-react'
 import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg'
 
 interface DashboardLayoutProps {
@@ -18,24 +19,12 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ role }: DashboardLayoutProps) {
   const location = useLocation()
+  const { user, loading } = useAuth()
+
   const isActive = (path: string) => location.pathname === path
 
-  const menuItems = {
-    company: [
-      { path: '/company', label: 'Dashboard', icon: LayoutDashboard },
-      { path: '/company/catalogs', label: 'My Catalogs', icon: BookOpen },
-      { path: '/company/ai-agent', label: 'AI Agent', icon: Bot },
-    ],
-    partner: [
-      { path: '/partner', label: 'Dashboard', icon: LayoutDashboard },
-      { path: '/partner/products', label: 'Products', icon: Package },
-      { path: '/partner/catalogs', label: 'Catalogs', icon: BookOpen },
-    ],
-    holder: [{ path: '/holder', label: 'My Card', icon: CreditCard }],
-  }
-
-  const items = menuItems[role] || []
-  const basePath = `/${role}`
+  if (loading) return null
+  if (!user || user.role !== role) return <Navigate to="/" replace />
 
   return (
     <SidebarProvider>
@@ -43,7 +32,7 @@ export function DashboardLayout({ role }: DashboardLayoutProps) {
         <Sidebar className="border-r border-border/50 bg-sidebar">
           <SidebarHeader className="p-4 border-b border-border/50 flex justify-center items-center">
             <Link
-              to={basePath}
+              to={`/${role}`}
               className="block w-full max-w-[200px] transition-transform hover:scale-[1.02]"
             >
               <img
@@ -55,15 +44,65 @@ export function DashboardLayout({ role }: DashboardLayoutProps) {
           </SidebarHeader>
           <SidebarContent className="p-3">
             <SidebarMenu className="gap-1.5">
-              {items.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton asChild isActive={isActive(item.path)} tooltip={item.label}>
-                    <Link to={item.path}>
-                      <item.icon className="w-4 h-4 mr-2" /> {item.label}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive(`/${role}`)} tooltip="Dashboard">
+                  <Link to={`/${role}`}>
+                    <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {role === 'company' && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/company/catalogs')}
+                      tooltip="Catalogs"
+                    >
+                      <Link to="/company/catalogs">
+                        <BookOpen className="w-4 h-4 mr-2" /> Catalogs
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/company/ai-agent')}
+                      tooltip="AI Agent"
+                    >
+                      <Link to="/company/ai-agent">
+                        <Bot className="w-4 h-4 mr-2" /> AI Agent
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
+              {role === 'partner' && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/partner/products')}
+                      tooltip="Products"
+                    >
+                      <Link to="/partner/products">
+                        <Package className="w-4 h-4 mr-2" /> Products
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/partner/catalogs')}
+                      tooltip="Catalogs"
+                    >
+                      <Link to="/partner/catalogs">
+                        <BookOpen className="w-4 h-4 mr-2" /> Catalogs
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>
