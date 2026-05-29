@@ -1,59 +1,76 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Building2, CreditCard, Activity } from 'lucide-react'
+import { AIChatWidget } from '@/components/AIChatWidget'
+import pb from '@/lib/pocketbase/client'
 
 export default function MasterDashboard() {
+  const [stats, setStats] = useState({
+    companies: 0,
+    holders: 0,
+    products: 0,
+  })
+
+  useEffect(() => {
+    Promise.all([
+      pb.collection('companies').getList(1, 1),
+      pb.collection('card_holders').getList(1, 1),
+      pb.collection('products').getList(1, 1),
+    ])
+      .then(([comp, hold, prod]) => {
+        setStats({
+          companies: comp.totalItems,
+          holders: hold.totalItems,
+          products: prod.totalItems,
+        })
+      })
+      .catch(console.error)
+  }, [])
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Master Dashboard</h1>
-        <p className="text-muted-foreground mt-2">
-          Todos os serviços estão operando normalmente. Veja seus indicadores de desempenho (KPIs)
-          abaixo.
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-slate-800">System Dashboard</h1>
+      <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Total Companies</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-slate-800">{stats.companies}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Card Holders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-slate-800">{stats.holders}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Active Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-slate-800">{stats.products}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="bg-white rounded-lg border p-12 text-center text-slate-500">
+        <h2 className="text-2xl font-semibold mb-3 text-slate-800">
+          Welcome to V Club Card Administration
+        </h2>
+        <p className="max-w-2xl mx-auto mb-4">
+          Use the side menu to seamlessly manage companies, catalogs, card holders, and monitor all
+          operational metrics from one place.
+        </p>
+        <p className="mt-4 text-sm bg-slate-50 inline-block px-4 py-2 rounded-full border">
+          💡 <strong>Pro Tip:</strong> Open the AI Assistant at the bottom right corner for system
+          prompts and configuration guides.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Companies</CardTitle>
-            <Building2 className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+2 from last month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Active Partners</CardTitle>
-            <Users className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">48</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Active Cards</CardTitle>
-            <CreditCard className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2,345</div>
-            <p className="text-xs text-muted-foreground">+180 this week</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            <Activity className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">Online</div>
-            <p className="text-xs text-muted-foreground">All systems go</p>
-          </CardContent>
-        </Card>
-      </div>
+      <AIChatWidget />
     </div>
   )
 }

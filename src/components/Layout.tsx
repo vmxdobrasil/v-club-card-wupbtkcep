@@ -1,47 +1,27 @@
-import { Outlet, Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
+/* Layout Component - A component that wraps the main content of the app
+   - Use this file to add a header, footer, or other elements that should be present on every page
+   - This component is used in the App.tsx file to wrap the main content of the app */
+
+import { Outlet } from 'react-router-dom'
 
 export default function Layout() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <img
-              src={cardImage}
-              alt="V Club Card Logo"
-              className="h-10 w-auto object-contain rounded-md"
-            />
-            <span className="hidden text-xl font-bold text-primary">V Club Card</span>
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Button asChild variant="ghost">
-              <Link to="/master">Painel Master</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/holder">Acessar Conta</Link>
-            </Button>
-          </nav>
+    <main className="flex flex-col min-h-screen bg-slate-50">
+      <header className="bg-white border-b shadow-sm p-4">
+        <div className="container mx-auto flex items-center justify-between">
+          <img
+            src="/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg"
+            alt="Logo"
+            className="h-10 w-auto object-contain rounded"
+            onError={(e) => {
+              e.currentTarget.src = 'https://img.usecurling.com/i?q=vclub&color=blue&shape=fill'
+            }}
+          />
         </div>
       </header>
-
-      <main className="flex-1">
+      <div className="flex-1 w-full max-w-7xl mx-auto">
         <Outlet />
-      </main>
-
-      <footer className="border-t bg-slate-50 py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-slate-600 space-y-2">
-          <p className="font-semibold text-slate-900 text-base">V Club Card</p>
-          <p>
-            Operado por:{' '}
-            <span className="font-medium">
-              Vmx do Brasil Administradora de Cartões e Benefícios Ltda
-            </span>
-          </p>
-          <p className="text-xs text-slate-500">BIN Oficial: 636943</p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </main>
   )
 }
