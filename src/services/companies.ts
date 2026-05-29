@@ -36,3 +36,9 @@ export const updateCompany = async (id: string, data: Partial<Company>) => {
 export const deleteCompany = async (id: string) => {
   return pb.collection('companies').delete(id)
 }
+
+export const getMyCompany = async () => {
+  const userId = pb.authStore.record?.id
+  if (!userId) throw new Error('Usuário não autenticado')
+  return pb.collection<Company>('companies').getFirstListItem(`owner_id="${userId}"`)
+}
