@@ -1,67 +1,102 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import {
-  Building,
+  Building2,
   Users,
-  Box,
-  ShoppingCart,
-  Trash2,
-  CreditCard,
+  ShoppingBag,
   LayoutDashboard,
+  Trash2,
+  Library,
+  LogOut,
+  CreditCard,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
 
 export function MasterLayout() {
   const location = useLocation()
+  const { signOut, user } = useAuth()
 
-  const navItems = [
-    { href: '/master', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/companies', icon: Building, label: 'Empresas' },
-    { href: '/partners', icon: ShoppingCart, label: 'Empresas Parceiras' },
-    { href: '/products', icon: Box, label: 'Produtos' },
-    { href: '/catalogos', icon: CreditCard, label: 'Catálogos' },
-    { href: '/usuarios', icon: Users, label: 'Usuários' },
-    { href: '/lixeira', icon: Trash2, label: 'Lixeira' },
+  const navigation = [
+    { name: 'Dashboard', href: '/master', icon: LayoutDashboard },
+    { name: 'Empresas', href: '/companies', icon: Building2 },
+    { name: 'BINs', href: '/bin', icon: CreditCard },
+    { name: 'Parceiros', href: '/partners', icon: Users },
+    { name: 'Produtos', href: '/products', icon: ShoppingBag },
+    { name: 'Catálogos', href: '/catalogos', icon: Library },
+    { name: 'Usuários', href: '/usuarios', icon: Users },
+    { name: 'Lixeira', href: '/lixeira', icon: Trash2 },
   ]
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
-      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0">
-        <div className="p-6 font-bold text-white text-2xl border-b border-slate-800 tracking-tighter flex items-center gap-2">
-          V CLUB
-        </div>
-        <nav className="flex-1 py-6 flex flex-col gap-1 px-3">
-          {navItems.map((item) => {
-            const isActive =
-              location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  'px-4 py-3 flex items-center gap-3 rounded-md transition-colors font-medium',
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'hover:bg-slate-800 hover:text-white',
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-      </aside>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-slate-50">
+        <Sidebar>
+          <SidebarHeader className="h-16 flex items-center px-4 border-b">
+            <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
+              <div className="size-8 rounded bg-primary flex items-center justify-center text-primary-foreground">
+                V
+              </div>
+              V Club Card
+            </Link>
+          </SidebarHeader>
+          <SidebarContent className="py-4">
+            <SidebarMenu>
+              {navigation.map((item) => (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      location.pathname === item.href ||
+                      location.pathname.startsWith(`${item.href}/`)
+                    }
+                  >
+                    <Link to={item.href} className="flex items-center gap-3 px-4 py-2">
+                      <item.icon className="size-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="border-t p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col overflow-hidden mr-2">
+                <span className="text-sm font-medium truncate">
+                  {user?.name || 'Administrador'}
+                </span>
+                <span className="text-xs text-slate-500 truncate">{user?.email}</span>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => signOut()} title="Sair">
+                <LogOut className="size-4 shrink-0" />
+              </Button>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b flex items-center px-8 justify-between shrink-0 shadow-sm">
-          <h1 className="font-semibold text-slate-800">Painel de Administração</h1>
-        </header>
-        <div className="p-8 overflow-auto flex-1">
-          <div className="max-w-7xl mx-auto">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <header className="h-16 flex items-center justify-between px-6 border-b bg-white lg:hidden">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <span className="font-bold">V Club Card</span>
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             <Outlet />
-          </div>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+    </SidebarProvider>
   )
 }

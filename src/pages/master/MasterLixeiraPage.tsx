@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import pb from '@/lib/pocketbase/client'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Table,
   TableBody,
@@ -9,54 +11,66 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { RefreshCw, Trash2 } from 'lucide-react'
 
 export default function MasterLixeiraPage() {
-  const [items, setItems] = useState<Record<string, any[]>>({
-    companies: [],
-    card_holders: [],
-    products: [],
-    catalogs: [],
-  })
+  const [data, setData] = useState({ companies: [], card_holders: [], products: [], catalogs: [] })
+  const { toast } = useToast()
 
-  const loadData = async (col: string) => {
+  const loadData = async () => {
     try {
-      const data = await pb.collection(col).getFullList({ filter: "deleted_at != ''" })
-      setItems((prev) => ({ ...prev, [col]: data }))
-    } catch {
-      toast.error(`Erro ao carregar lixeira de ${col}`)
+      const [cmp, hld, prd, cat] = await Promise.all([
+        pb
+          .collection('companies')
+          .getFullList({ filter: "deleted_at != '' && deleted_at != null" }),
+        pb
+          .collection('card_holders')
+          .getFullList({ filter: "deleted_at != '' && deleted_at != null", expand: 'user_id' }),
+        pb.collection('products').getFullList({ filter: "deleted_at != '' && deleted_at != null" }),
+        pb.collection('catalogs').getFullList({ filter: "deleted_at != '' && deleted_at != null" }),
+      ])
+      setData({
+        companies: cmp as any,
+        card_holders: hld as any,
+        products: prd as any,
+        catalogs: cat as any,
+      })
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Falha ao carregar lixeira', variant: 'destructive' })
     }
   }
 
   useEffect(() => {
-    ;['companies', 'card_holders', 'products', 'catalogs'].forEach(loadData)
+    loadData()
   }, [])
 
-  const handleRestore = async (col: string, id: string) => {
+  const handleRestore = async (collection: string, id: string) => {
     try {
-      await pb.collection(col).update(id, { deleted_at: null })
-      setItems((prev) => ({ ...prev, [col]: prev[col].filter((i) => i.id !== id) }))
-      toast.success('Registro restaurado com sucesso')
-    } catch {
-      toast.error('Erro ao restaurar')
+      await pb.collection(collection).update(id, { deleted_at: null })
+      toast({ title: 'Restaurado', description: 'Registro restaurado com sucesso.' })
+      loadData()
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Falha ao restaurar.', variant: 'destructive' })
     }
   }
 
-  const handlePermanentDelete = async (col: string, id: string) => {
-    if (!confirm('Tem certeza que deseja excluir permanentemente?')) return
+  const handlePermanentDelete = async (collection: string, id: string) => {
+    if (!confirm('Tem certeza? A exclusão permanente não pode ser desfeita.')) return
     try {
-      await pb.collection(col).delete(id)
-      setItems((prev) => ({ ...prev, [col]: prev[col].filter((i) => i.id !== id) }))
-      toast.success('Excluído permanentemente')
-    } catch {
-      toast.error('Erro ao excluir')
+      await pb.collection(collection).delete(id)
+      toast({ title: 'Excluído', description: 'Registro excluído permanentemente.' })
+      loadData()
+    } catch (e) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao excluir permanentemente.',
+        variant: 'destructive',
+      })
     }
   }
 
-  const renderTable = (col: string, titleKey: string) => (
-    <div className="border rounded-md bg-white mt-4 shadow-sm">
+  const renderTable = (items: any[], collection: string, nameField: string) => (
+    <div className="bg-white rounded-lg border shadow-sm mt-4">
       <Table>
         <TableHeader>
           <TableRow>
@@ -66,30 +80,36 @@ export default function MasterLixeiraPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items[col].map((item) => (
+          {items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell className="font-medium">{item[titleKey] || item.id}</TableCell>
-              <TableCell className="text-slate-500">
-                {item.deleted_at ? format(new Date(item.deleted_at), 'dd/MM/yyyy HH:mm') : ''}
+              <TableCell className="font-medium">
+                {collection === 'card_holders'
+                  ? item.expand?.user_id?.name || item.card_number
+                  : item[nameField]}
               </TableCell>
+              <TableCell>{new Date(item.deleted_at).toLocaleString()}</TableCell>
               <TableCell className="text-right space-x-2">
-                <Button variant="outline" size="sm" onClick={() => handleRestore(col, item.id)}>
-                  Restaurar
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRestore(collection, item.id)}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" /> Restaurar
                 </Button>
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => handlePermanentDelete(col, item.id)}
+                  onClick={() => handlePermanentDelete(collection, item.id)}
                 >
-                  Excluir Permanentemente
+                  <Trash2 className="w-3 h-3 mr-1" /> Excluir
                 </Button>
               </TableCell>
             </TableRow>
           ))}
-          {items[col].length === 0 && (
+          {items.length === 0 && (
             <TableRow>
-              <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
-                Nenhum item na lixeira.
+              <TableCell colSpan={3} className="text-center py-6 text-slate-500">
+                Lixeira vazia para esta categoria.
               </TableCell>
             </TableRow>
           )}
@@ -99,22 +119,29 @@ export default function MasterLixeiraPage() {
   )
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">Lixeira</h2>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Lixeira</h2>
+        <p className="text-sm text-slate-500">
+          Gerencie registros excluídos. Registros aqui podem ser restaurados ou permanentemente
+          deletados.
+        </p>
       </div>
-
-      <Tabs defaultValue="companies" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-slate-200">
-          <TabsTrigger value="companies">Empresas</TabsTrigger>
-          <TabsTrigger value="card_holders">Usuários</TabsTrigger>
-          <TabsTrigger value="products">Produtos</TabsTrigger>
-          <TabsTrigger value="catalogs">Catálogos</TabsTrigger>
+      <Tabs defaultValue="companies">
+        <TabsList>
+          <TabsTrigger value="companies">Empresas ({data.companies.length})</TabsTrigger>
+          <TabsTrigger value="holders">Usuários ({data.card_holders.length})</TabsTrigger>
+          <TabsTrigger value="products">Produtos ({data.products.length})</TabsTrigger>
+          <TabsTrigger value="catalogs">Catálogos ({data.catalogs.length})</TabsTrigger>
         </TabsList>
-        <TabsContent value="companies">{renderTable('companies', 'name')}</TabsContent>
-        <TabsContent value="card_holders">{renderTable('card_holders', 'card_number')}</TabsContent>
-        <TabsContent value="products">{renderTable('products', 'name')}</TabsContent>
-        <TabsContent value="catalogs">{renderTable('catalogs', 'name')}</TabsContent>
+        <TabsContent value="companies">
+          {renderTable(data.companies, 'companies', 'name')}
+        </TabsContent>
+        <TabsContent value="holders">
+          {renderTable(data.card_holders, 'card_holders', 'name')}
+        </TabsContent>
+        <TabsContent value="products">{renderTable(data.products, 'products', 'name')}</TabsContent>
+        <TabsContent value="catalogs">{renderTable(data.catalogs, 'catalogs', 'name')}</TabsContent>
       </Tabs>
     </div>
   )

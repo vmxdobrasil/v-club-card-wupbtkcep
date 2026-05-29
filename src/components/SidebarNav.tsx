@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import useAuthStore from '@/stores/use-auth-store'
 import { cn } from '@/lib/utils'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
 
 export function SidebarNav() {
   const { role } = useAuthStore()
@@ -24,11 +24,11 @@ export function SidebarNav() {
       { to: '/partners', icon: Users, label: 'Parceiros' },
       { to: '/catalogos', icon: Store, label: 'Catálogos' },
       { to: '/products', icon: Receipt, label: 'Produtos' },
-      { to: '/holders', icon: Users, label: 'Detentores' },
+      { to: '/usuarios', icon: Users, label: 'Usuários' },
     ],
     company: [
       { to: '/company', icon: LayoutDashboard, label: 'Início' },
-      { to: '/company/holders', icon: Users, label: 'Portadores' },
+      { to: '/company/usuarios', icon: Users, label: 'Usuários' },
       { to: '/company/partners', icon: Store, label: 'Parceiros' },
       { to: '/company/catalogs', icon: Store, label: 'Catálogos' },
     ],

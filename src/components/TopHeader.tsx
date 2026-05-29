@@ -3,7 +3,7 @@ import { LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useNavigate } from 'react-router-dom'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
 
 export function TopHeader() {
   const { user, signOut } = useAuth()
@@ -18,9 +18,12 @@ export function TopHeader() {
     <header className="h-16 flex items-center justify-between px-4 md:px-8 border-b bg-background sticky top-0 z-40">
       <div className="flex items-center gap-4">
         {user?.role !== 'holder' && <SidebarTrigger />}
-        {user?.role === 'holder' && (
+        <div className="flex items-center gap-3">
           <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
-        )}
+          <span className="hidden md:block text-xs font-semibold text-muted-foreground">
+            Vmx do Brasil Administradora de Cartões e Benefícios Ltda
+          </span>
+        </div>
       </div>
       <div className="flex items-center gap-4">
         <div className="hidden md:flex flex-col items-end mr-2">

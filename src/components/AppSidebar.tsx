@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
 import {
   LayoutDashboard,
   Users,
@@ -35,11 +35,11 @@ export function AppSidebar() {
       { title: 'Catálogos', url: '/catalogos', icon: Store },
       { title: 'Produtos', url: '/products', icon: FileText },
       { title: 'Parceiros', url: '/partners', icon: Users },
-      { title: 'Detentores', url: '/holders', icon: Users },
+      { title: 'Usuários', url: '/usuarios', icon: Users },
     ],
     company: [
       { title: 'Início', url: '/company', icon: LayoutDashboard },
-      { title: 'Portadores', url: '/company/holders', icon: Users },
+      { title: 'Usuários', url: '/company/usuarios', icon: Users },
       { title: 'Parceiros', url: '/company/partners', icon: Store },
       { title: 'Catálogos', url: '/company/catalogs', icon: Store },
     ],
