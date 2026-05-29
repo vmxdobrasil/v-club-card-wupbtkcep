@@ -3,6 +3,7 @@ import { LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useNavigate } from 'react-router-dom'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
 
 export function TopHeader() {
   const { user, signOut } = useAuth()
@@ -18,12 +19,7 @@ export function TopHeader() {
       <div className="flex items-center gap-4">
         {user?.role !== 'holder' && <SidebarTrigger />}
         {user?.role === 'holder' && (
-          <div className="font-bold text-xl flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-primary-foreground italic text-lg">
-              V
-            </div>
-            Club <span className="text-secondary font-normal">Card</span>
-          </div>
+          <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
         )}
       </div>
       <div className="flex items-center gap-4">

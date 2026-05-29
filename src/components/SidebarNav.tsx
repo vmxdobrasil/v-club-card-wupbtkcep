@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import useAuthStore from '@/stores/use-auth-store'
 import { cn } from '@/lib/utils'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
 
 export function SidebarNav() {
   const { role } = useAuthStore()
@@ -48,13 +49,8 @@ export function SidebarNav() {
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-background">
-      <div className="flex h-16 items-center px-6 border-b">
-        <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-primary">
-          <div className="h-8 w-8 bg-secondary rounded-lg flex items-center justify-center text-primary-foreground">
-            V
-          </div>
-          Club Card
-        </div>
+      <div className="flex h-16 items-center px-6 border-b justify-center">
+        <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {currentLinks.map((link) => (

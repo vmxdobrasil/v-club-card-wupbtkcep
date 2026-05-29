@@ -42,6 +42,20 @@ const App = () => (
               <Route path="catalogs" element={<MasterCatalogsPage />} />
               <Route path="catalogs/:id" element={<MasterCatalogDetailsPage />} />
             </Route>
+
+            <Route path="/bin" element={<MasterLayout />}>
+              <Route index element={<MasterCompaniesPage defaultTab="bins" />} />
+            </Route>
+            <Route path="/partners" element={<MasterLayout />}>
+              <Route index element={<MasterPartnersPage />} />
+            </Route>
+            <Route path="/products" element={<MasterLayout />}>
+              <Route index element={<MasterProductsPage />} />
+            </Route>
+            <Route path="/catalogs/:id" element={<MasterLayout />}>
+              <Route index element={<MasterCatalogDetailsPage />} />
+            </Route>
+
             <Route path="/company" element={<CompanyDashboard />} />
             <Route path="/company/catalogs" element={<CompanyCatalogsPage />} />
             <Route path="/company/catalogs/:id" element={<CompanyCatalogDetailsPage />} />

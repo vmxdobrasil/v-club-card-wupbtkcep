@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
 import {
   LayoutDashboard,
   Users,
@@ -60,13 +61,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader className="h-16 flex items-center px-6 border-b border-sidebar-border">
-        <div className="font-bold text-xl flex items-center gap-2 text-sidebar-primary">
-          <div className="w-8 h-8 bg-sidebar-primary rounded flex items-center justify-center text-sidebar-primary-foreground italic text-lg">
-            V
-          </div>
-          Club <span className="text-secondary font-normal">Card</span>
-        </div>
+      <SidebarHeader className="h-16 flex items-center px-4 border-b border-sidebar-border justify-center">
+        <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

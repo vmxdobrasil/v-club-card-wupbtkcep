@@ -2,6 +2,7 @@ import { Bell, Search, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import useAuthStore from '@/stores/use-auth-store'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b bg-background px-4 md:px-6 shadow-sm">
       <div className="flex flex-1 items-center gap-4">
+        <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
         <form className="hidden md:flex max-w-md flex-1">
           <div className="relative w-full">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

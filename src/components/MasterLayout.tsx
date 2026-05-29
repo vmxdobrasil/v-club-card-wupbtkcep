@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-08.18.14-1-9a666.jpeg'
 import {
   SidebarProvider,
   Sidebar,
@@ -44,13 +45,8 @@ export function MasterLayout() {
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="h-16 flex items-center px-4 border-b">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg">V Club Master</span>
-          </div>
+        <SidebarHeader className="h-16 flex items-center px-4 border-b justify-center">
+          <img src={cardImage} alt="V Club Card" className="h-10 w-auto rounded object-contain" />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>

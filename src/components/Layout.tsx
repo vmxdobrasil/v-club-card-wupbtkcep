@@ -1,60 +1,38 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { useIsMobile } from '@/hooks/use-mobile'
-import { SidebarProvider } from '@/components/ui/sidebar'
-import { useAuth } from '@/hooks/use-auth'
-import { AppSidebar } from './AppSidebar'
+import { Outlet, useLocation } from 'react-router-dom'
 import { TopHeader } from './TopHeader'
-import { MobileBottomNav } from './MobileBottomNav'
-import { cn } from '@/lib/utils'
-import { Loader2 } from 'lucide-react'
+import { AppSidebar } from './AppSidebar'
+import { SidebarProvider } from '@/components/ui/sidebar'
+import { BottomNav } from './BottomNav'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function Layout() {
-  const { user, isAuthenticated, loading } = useAuth()
-  const isMobile = useIsMobile()
+  const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
 
-  const isHolder = user?.role === 'holder'
+  // Rotas públicas e rotas master que têm seu próprio layout
+  const isPublicRoute = location.pathname === '/' || location.pathname.startsWith('/catalog/')
+  const isMasterRoute =
+    location.pathname.startsWith('/master') ||
+    location.pathname === '/bin' ||
+    location.pathname === '/partners' ||
+    location.pathname === '/products' ||
+    location.pathname.startsWith('/catalogs/')
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated && location.pathname !== '/') {
-      navigate('/')
-    }
-  }, [isAuthenticated, loading, location.pathname, navigate])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <main className="min-h-screen bg-background">
-        <Outlet />
-      </main>
-    )
+  if (isPublicRoute || isMasterRoute || !user) {
+    return <Outlet />
   }
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-slate-50 dark:bg-slate-900/50">
-        {!isHolder && <AppSidebar />}
-        <main
-          className={cn(
-            'flex-1 flex flex-col w-full min-h-screen transition-all duration-300',
-            isHolder && isMobile && 'pb-16', // Space for bottom nav
-          )}
-        >
+      <div className="flex min-h-screen w-full bg-background">
+        {user.role !== 'holder' && <AppSidebar />}
+        <div className="flex flex-col flex-1 w-full min-w-0">
           <TopHeader />
-          <div className="flex-1 p-4 md:p-8 max-w-[1440px] mx-auto w-full animate-fade-in-up">
+          <main className="flex-1 overflow-auto pb-16 md:pb-0 p-4 lg:p-8 bg-muted/10">
             <Outlet />
-          </div>
-        </main>
-        {isHolder && isMobile && <MobileBottomNav />}
+          </main>
+          {user.role === 'holder' && <BottomNav />}
+        </div>
       </div>
     </SidebarProvider>
   )
