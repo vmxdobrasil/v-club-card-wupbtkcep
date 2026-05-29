@@ -2,7 +2,7 @@ import { Bell, Search, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import useAuthStore from '@/stores/use-auth-store'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
 import {
   DropdownMenu,
   DropdownMenuContent,

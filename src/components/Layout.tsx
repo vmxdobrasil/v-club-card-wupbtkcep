@@ -1,5 +1,6 @@
 import { Outlet, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
 
 export default function Layout() {
   return (
@@ -8,14 +9,9 @@ export default function Layout() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="/whatsapp-image.jpeg"
+              src={cardImage}
               alt="V Club Card Logo"
               className="h-10 w-auto object-contain rounded-md"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.style.display = 'none'
-                target.nextElementSibling?.classList.remove('hidden')
-              }}
             />
             <span className="hidden text-xl font-bold text-primary">V Club Card</span>
           </Link>

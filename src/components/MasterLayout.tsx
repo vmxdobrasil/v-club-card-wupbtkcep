@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
+import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
 
 export function MasterLayout() {
   const location = useLocation()
@@ -44,10 +45,12 @@ export function MasterLayout() {
         <Sidebar>
           <SidebarHeader className="h-16 flex items-center px-4 border-b">
             <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-              <div className="size-8 rounded bg-primary flex items-center justify-center text-primary-foreground">
-                V
-              </div>
-              V Club Card
+              <img
+                src={cardImage}
+                alt="V Club Card"
+                className="h-8 w-auto rounded object-contain"
+              />
+              <span className="truncate">V Club Card</span>
             </Link>
           </SidebarHeader>
           <SidebarContent className="py-4">
