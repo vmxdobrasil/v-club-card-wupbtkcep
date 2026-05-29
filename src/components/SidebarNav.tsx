@@ -18,30 +18,27 @@ export function SidebarNav() {
 
   const links = {
     master: [
-      { to: '/master', icon: LayoutDashboard, label: 'Painel Global' },
+      { to: '/master', icon: LayoutDashboard, label: 'Início' },
       { to: '/master/companies', icon: Building2, label: 'Empresas' },
-      { to: '/master/bin', icon: CreditCard, label: 'Controle de BIN' },
-      { to: '/master/audit', icon: ShieldCheck, label: 'Auditoria' },
+      { to: '/master/bin', icon: CreditCard, label: 'Prefixo BIN' },
+      { to: '/master/partners', icon: Users, label: 'Parceiros' },
       { to: '/master/catalogs', icon: Store, label: 'Catálogos' },
       { to: '/master/products', icon: Receipt, label: 'Produtos' },
     ],
     company: [
-      { to: '/company', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/company', icon: LayoutDashboard, label: 'Início' },
       { to: '/company/holders', icon: Users, label: 'Portadores' },
-      { to: '/company/payroll', icon: Receipt, label: 'Folha Consignada' },
-      { to: '/company/partners', icon: Store, label: 'Rede Parceira' },
+      { to: '/company/partners', icon: Store, label: 'Parceiros' },
       { to: '/company/catalogs', icon: Store, label: 'Catálogos' },
     ],
     partner: [
-      { to: '/partner', icon: LayoutDashboard, label: 'Visão Geral' },
-      { to: '/partner/charge', icon: Receipt, label: 'Cobrar (QR)' },
-      { to: '/partner/transactions', icon: PieChart, label: 'Extrato' },
-      { to: '/partner/products', icon: Store, label: 'Meus Produtos' },
+      { to: '/partner', icon: LayoutDashboard, label: 'Início' },
+      { to: '/partner/products', icon: Store, label: 'Produtos' },
+      { to: '/partner/catalogs', icon: Store, label: 'Catálogos' },
     ],
     holder: [
-      { to: '/holder', icon: CreditCard, label: 'Minha Carteira' },
-      { to: '/holder/transactions', icon: Receipt, label: 'Transações' },
-      { to: '/holder/partners', icon: Store, label: 'Onde Comprar' },
+      { to: '/holder', icon: CreditCard, label: 'Início' },
+      { to: '/holder/partners', icon: Store, label: 'Parceiros' },
     ],
   }
 

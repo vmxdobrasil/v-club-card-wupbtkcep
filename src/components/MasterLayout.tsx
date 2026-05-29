@@ -1,115 +1,78 @@
-import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
-import { Building2, CreditCard, Users, Package, BookOpen, LayoutDashboard } from 'lucide-react'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg'
+  Building,
+  CreditCard,
+  Package,
+  Users,
+  LayoutDashboard,
+  LogOut,
+  FolderOpen,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
+
+const navItems = [
+  { title: 'Dashboard', href: '/master', icon: LayoutDashboard },
+  { title: 'Empresas', href: '/master/companies', icon: Building },
+  { title: 'Prefixos', href: '/master/bin', icon: CreditCard },
+  { title: 'Produtos', href: '/master/products', icon: Package },
+  { title: 'Parceiros', href: '/master/partners', icon: Users },
+  { title: 'Catálogos', href: '/master/catalogos', icon: FolderOpen },
+  { title: 'Detentores', href: '/master/holders', icon: Users },
+]
 
 export function MasterLayout() {
-  const location = useLocation()
-  const { user, loading } = useAuth()
-
-  const isActive = (path: string) => location.pathname === path
-
-  if (loading) return null
-  if (!user || user.role !== 'master') return <Navigate to="/" replace />
+  const { pathname } = useLocation()
+  const { signOut } = useAuth()
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen w-full bg-background overflow-hidden">
-        <Sidebar className="border-r border-border/50 bg-sidebar">
-          <SidebarHeader className="p-4 border-b border-border/50 flex justify-center items-center">
-            <Link
-              to="/master"
-              className="block w-full max-w-[200px] transition-transform hover:scale-[1.02]"
-            >
-              <img
-                src={cardImage}
-                alt="V Club Card"
-                className="w-full h-auto object-contain rounded-xl shadow-sm"
-              />
-            </Link>
-          </SidebarHeader>
-          <SidebarContent className="p-3">
-            <SidebarMenu className="gap-1.5">
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/master')} tooltip="Dashboard">
-                  <Link to="/master">
-                    <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive('/master/companies')}
-                  tooltip="Companies"
-                >
-                  <Link to="/master/companies">
-                    <Building2 className="w-4 h-4 mr-2" /> Companies
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/master/bin')} tooltip="BIN Prefix">
-                  <Link to="/master/bin">
-                    <CreditCard className="w-4 h-4 mr-2" /> BIN Prefix
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive('/master/partners')}
-                  tooltip="Partners"
-                >
-                  <Link to="/master/partners">
-                    <Users className="w-4 h-4 mr-2" /> Partners
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive('/master/products')}
-                  tooltip="Products"
-                >
-                  <Link to="/master/products">
-                    <Package className="w-4 h-4 mr-2" /> Products
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive('/master/catalogs')}
-                  tooltip="Catalogs"
-                >
-                  <Link to="/master/catalogs">
-                    <BookOpen className="w-4 h-4 mr-2" /> Catalogs
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
-        <div className="flex flex-col flex-1 overflow-hidden relative">
-          <header className="h-16 flex items-center px-4 border-b border-border/50 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-            <SidebarTrigger className="-ml-2" />
-          </header>
-          <main className="flex-1 overflow-y-auto bg-muted/20 p-6">
-            <Outlet />
-          </main>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <aside className="w-64 bg-white border-r flex flex-col shadow-sm z-10">
+        <div className="p-6 border-b flex items-center justify-center bg-gray-900">
+          <img
+            src="/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg"
+            alt="Logo"
+            className="h-12 w-auto object-contain rounded"
+          />
         </div>
-      </div>
-    </SidebarProvider>
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href || (item.href !== '/master' && pathname.startsWith(item.href))
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200',
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                )}
+              >
+                <item.icon
+                  className={cn('w-5 h-5 mr-3', isActive ? 'text-white' : 'text-gray-400')}
+                />
+                {item.title}
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="p-4 border-t bg-gray-50">
+          <Button
+            variant="ghost"
+            onClick={() => signOut()}
+            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="w-5 h-5 mr-3" />
+            Sair da Conta
+          </Button>
+        </div>
+      </aside>
+      <main className="flex-1 overflow-y-auto bg-gray-50">
+        <Outlet />
+      </main>
+    </div>
   )
 }

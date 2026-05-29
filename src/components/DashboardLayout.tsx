@@ -1,120 +1,84 @@
-import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Package, LayoutDashboard, LogOut, FolderOpen, Bot } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
-import { LayoutDashboard, BookOpen, Bot, Package } from 'lucide-react'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg'
+import { Button } from '@/components/ui/button'
 
 interface DashboardLayoutProps {
   role: 'company' | 'holder' | 'partner'
 }
 
 export function DashboardLayout({ role }: DashboardLayoutProps) {
-  const location = useLocation()
-  const { user, loading } = useAuth()
+  const { pathname } = useLocation()
+  const { signOut } = useAuth()
 
-  const isActive = (path: string) => location.pathname === path
+  const getNavItems = () => {
+    if (role === 'company') {
+      return [
+        { title: 'Dashboard', href: '/company', icon: LayoutDashboard },
+        { title: 'Catálogos', href: '/company/catalogos', icon: FolderOpen },
+        { title: 'AI Agent', href: '/company/ai-agent', icon: Bot },
+      ]
+    }
+    if (role === 'partner') {
+      return [
+        { title: 'Dashboard', href: '/partner', icon: LayoutDashboard },
+        { title: 'Produtos', href: '/partner/products', icon: Package },
+        { title: 'Catálogos', href: '/partner/catalogos', icon: FolderOpen },
+      ]
+    }
+    return [{ title: 'Dashboard', href: '/holder', icon: LayoutDashboard }]
+  }
 
-  if (loading) return null
-  if (!user || user.role !== role) return <Navigate to="/" replace />
+  const navItems = getNavItems()
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen w-full bg-background overflow-hidden">
-        <Sidebar className="border-r border-border/50 bg-sidebar">
-          <SidebarHeader className="p-4 border-b border-border/50 flex justify-center items-center">
-            <Link
-              to={`/${role}`}
-              className="block w-full max-w-[200px] transition-transform hover:scale-[1.02]"
-            >
-              <img
-                src={cardImage}
-                alt="V Club Card"
-                className="w-full h-auto object-contain rounded-xl shadow-sm"
-              />
-            </Link>
-          </SidebarHeader>
-          <SidebarContent className="p-3">
-            <SidebarMenu className="gap-1.5">
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive(`/${role}`)} tooltip="Dashboard">
-                  <Link to={`/${role}`}>
-                    <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {role === 'company' && (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive('/company/catalogs')}
-                      tooltip="Catalogs"
-                    >
-                      <Link to="/company/catalogs">
-                        <BookOpen className="w-4 h-4 mr-2" /> Catalogs
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive('/company/ai-agent')}
-                      tooltip="AI Agent"
-                    >
-                      <Link to="/company/ai-agent">
-                        <Bot className="w-4 h-4 mr-2" /> AI Agent
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              )}
-              {role === 'partner' && (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive('/partner/products')}
-                      tooltip="Products"
-                    >
-                      <Link to="/partner/products">
-                        <Package className="w-4 h-4 mr-2" /> Products
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive('/partner/catalogs')}
-                      tooltip="Catalogs"
-                    >
-                      <Link to="/partner/catalogs">
-                        <BookOpen className="w-4 h-4 mr-2" /> Catalogs
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              )}
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
-        <div className="flex flex-col flex-1 overflow-hidden relative">
-          <header className="h-16 flex items-center px-4 border-b border-border/50 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-            <SidebarTrigger className="-ml-2" />
-          </header>
-          <main className="flex-1 overflow-y-auto bg-muted/20 p-6">
-            <Outlet />
-          </main>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <aside className="w-64 bg-white border-r flex flex-col shadow-sm z-10">
+        <div className="p-6 border-b flex items-center justify-center bg-gray-900">
+          <img
+            src="/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg"
+            alt="Logo"
+            className="h-12 w-auto object-contain rounded"
+          />
         </div>
-      </div>
-    </SidebarProvider>
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href || (item.href !== `/${role}` && pathname.startsWith(item.href))
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200',
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                )}
+              >
+                <item.icon
+                  className={cn('w-5 h-5 mr-3', isActive ? 'text-white' : 'text-gray-400')}
+                />
+                {item.title}
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="p-4 border-t bg-gray-50">
+          <Button
+            variant="ghost"
+            onClick={() => signOut()}
+            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="w-5 h-5 mr-3" />
+            Sair da Conta
+          </Button>
+        </div>
+      </aside>
+      <main className="flex-1 overflow-y-auto bg-gray-50">
+        <Outlet />
+      </main>
+    </div>
   )
 }

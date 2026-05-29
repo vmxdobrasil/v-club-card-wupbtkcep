@@ -14,6 +14,7 @@ import MasterPartnersPage from '@/pages/master/MasterPartnersPage'
 import MasterProductsPage from '@/pages/master/MasterProductsPage'
 import MasterCatalogsPage from '@/pages/master/MasterCatalogsPage'
 import MasterCatalogDetailsPage from '@/pages/master/MasterCatalogDetailsPage'
+import MasterHoldersPage from '@/pages/master/MasterHoldersPage'
 import CompanyDashboard from '@/pages/company/CompanyDashboard'
 import CompanyCatalogsPage from '@/pages/company/CompanyCatalogsPage'
 import CompanyCatalogDetailsPage from '@/pages/company/CompanyCatalogDetailsPage'
@@ -41,27 +42,15 @@ const App = () => (
               <Route path="bin" element={<MasterCompaniesPage defaultTab="bins" />} />
               <Route path="partners" element={<MasterPartnersPage />} />
               <Route path="products" element={<MasterProductsPage />} />
-              <Route path="catalogs" element={<MasterCatalogsPage />} />
-              <Route path="catalogs/:id" element={<MasterCatalogDetailsPage />} />
-            </Route>
-
-            <Route path="/bin" element={<MasterLayout />}>
-              <Route index element={<MasterCompaniesPage defaultTab="bins" />} />
-            </Route>
-            <Route path="/partners" element={<MasterLayout />}>
-              <Route index element={<MasterPartnersPage />} />
-            </Route>
-            <Route path="/products" element={<MasterLayout />}>
-              <Route index element={<MasterProductsPage />} />
-            </Route>
-            <Route path="/catalogs/:id" element={<MasterLayout />}>
-              <Route index element={<MasterCatalogDetailsPage />} />
+              <Route path="catalogos" element={<MasterCatalogsPage />} />
+              <Route path="catalogos/:id" element={<MasterCatalogDetailsPage />} />
+              <Route path="holders" element={<MasterHoldersPage />} />
             </Route>
 
             <Route path="/company" element={<DashboardLayout role="company" />}>
               <Route index element={<CompanyDashboard />} />
-              <Route path="catalogs" element={<CompanyCatalogsPage />} />
-              <Route path="catalogs/:id" element={<CompanyCatalogDetailsPage />} />
+              <Route path="catalogos" element={<CompanyCatalogsPage />} />
+              <Route path="catalogos/:id" element={<CompanyCatalogDetailsPage />} />
               <Route path="ai-agent" element={<CompanyAIAgentPage />} />
             </Route>
 
@@ -72,7 +61,7 @@ const App = () => (
             <Route path="/partner" element={<DashboardLayout role="partner" />}>
               <Route index element={<PartnerDashboard />} />
               <Route path="products" element={<PartnerProductsPage />} />
-              <Route path="catalogs" element={<PartnerCatalogsPage />} />
+              <Route path="catalogos" element={<PartnerCatalogsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
