@@ -19,8 +19,18 @@ onRecordCreate((e) => {
   const companyId = record.get('company_id')
   const company = $app.findRecordById('companies', companyId)
 
+  const holderInitial = $app.findRecordById('card_holders', holderId)
+  const holderCreditSource = holderInitial.getString('credit_source')
+
   const rate = company.getFloat('commission_rate') || 0.01
-  const provider = company.getString('gateway_provider') || 'Asaas'
+  let provider = company.getString('gateway_provider') || 'Asaas'
+
+  if (holderCreditSource === 'asaas') {
+    provider = 'Asaas'
+  } else if (holderCreditSource === 'proprietary') {
+    provider = 'None/Manual'
+  }
+
   const asaasWalletId = company.getString('asaas_wallet_id') || ''
 
   const commission = amount * rate
