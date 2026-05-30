@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-30T19:01:59.316Z",
+  "generatedAt": "2026-05-30T19:02:43.316Z",
   "collections": [
     {
       "name": "users",
@@ -29,31 +29,21 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "role",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "master",
-            "company",
-            "partner",
-            "holder"
-          ]
+          "selectValues": ["master", "company", "partner", "holder"]
         }
       ],
       "indexes": [
@@ -101,32 +91,21 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "1",
-            "2",
-            "both"
-          ]
+          "selectValues": ["1", "2", "both"]
         },
         {
           "name": "gateway_provider",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "Asaas",
-            "Alternative",
-            "None/Manual"
-          ]
+          "selectValues": ["Asaas", "Alternative", "None/Manual"]
         },
         {
           "name": "status",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "active",
-            "inactive"
-          ]
+          "selectValues": ["active", "inactive"]
         },
         {
           "name": "owner_id",
@@ -140,19 +119,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "asaas_wallet_id",
@@ -265,30 +239,21 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "active",
-            "blocked",
-            "canceled"
-          ]
+          "selectValues": ["active", "blocked", "canceled"]
         },
         {
           "name": "created",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "asaas_customer_id",
@@ -331,20 +296,14 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "physical_virtual",
-            "virtual_only"
-          ]
+          "selectValues": ["physical_virtual", "virtual_only"]
         },
         {
           "name": "credit_source",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "proprietary",
-            "asaas"
-          ]
+          "selectValues": ["proprietary", "asaas"]
         },
         {
           "name": "parent_holder_id",
@@ -403,21 +362,14 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "debit",
-            "credit"
-          ]
+          "selectValues": ["debit", "credit"]
         },
         {
           "name": "status",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "pending",
-            "approved",
-            "rejected"
-          ]
+          "selectValues": ["pending", "approved", "rejected"]
         },
         {
           "name": "split_data",
@@ -436,19 +388,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": []
@@ -500,29 +447,21 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "in_stock",
-            "out_of_stock"
-          ]
+          "selectValues": ["in_stock", "out_of_stock"]
         },
         {
           "name": "created",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "deleted_at",
@@ -568,10 +507,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "active",
-            "inactive"
-          ]
+          "selectValues": ["active", "inactive"]
         },
         {
           "name": "products",
@@ -593,19 +529,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "deleted_at",
