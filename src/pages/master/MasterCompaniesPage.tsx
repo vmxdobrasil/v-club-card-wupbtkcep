@@ -1,5 +1,20 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash, Upload, Building2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { Trash2, Edit, Plus, Image as ImageIcon } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
+import {
+  getCompanies,
+  createCompany,
+  updateCompany,
+  softDeleteCompany,
+  type Company,
+} from '@/services/companies'
+import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -15,9 +30,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import {
   Select,
   SelectContent,
@@ -25,394 +48,490 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
-import pb from '@/lib/pocketbase/client'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const formSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  bin_prefix: z.string().min(1, 'Prefixo BIN é obrigatório'),
+  commission_rate: z.coerce
+    .number()
+    .min(0.00025, 'O mínimo é 0.00025')
+    .max(0.01, 'O máximo é 0.01'),
+  modality: z.enum(['1', '2', 'both']),
+  gateway_provider: z.enum(['Asaas', 'Alternative', 'None/Manual']),
+  status: z.enum(['active', 'inactive']),
+  cnpj: z.string().optional(),
+  address: z.string().optional(),
+  zip_code: z.string().optional(),
+  phone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  responsible_name: z.string().optional(),
+})
+
+type FormValues = z.infer<typeof formSchema>
 
 export default function MasterCompaniesPage({ defaultTab = 'companies' }: { defaultTab?: string }) {
-  const [companies, setCompanies] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [companies, setCompanies] = useState<Company[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-
-  const [formData, setFormData] = useState({
-    name: '',
-    bin_prefix: '',
-    commission_rate: '',
-    modality: '1',
-    gateway_provider: 'Asaas',
-    status: 'active',
-  })
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string>('')
-  const [isSaving, setIsSaving] = useState(false)
-
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { toast } = useToast()
 
-  const loadCompanies = async () => {
-    setLoading(true)
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      bin_prefix: '',
+      commission_rate: 0.005,
+      modality: 'both',
+      gateway_provider: 'Asaas',
+      status: 'active',
+      cnpj: '',
+      address: '',
+      zip_code: '',
+      phone: '',
+      whatsapp: '',
+      responsible_name: '',
+    },
+  })
+
+  const loadData = async () => {
     try {
-      const records = await pb.collection('companies').getFullList({
-        filter: defaultTab === 'bins' ? "deleted_at != ''" : "deleted_at = ''",
-        sort: '-created',
-      })
-      setCompanies(records)
+      const data = await getCompanies()
+      setCompanies(data)
     } catch (err) {
-      toast({ title: 'Erro', description: 'Erro ao carregar empresas.', variant: 'destructive' })
-    } finally {
-      setLoading(false)
+      toast({ title: 'Erro ao carregar empresas', variant: 'destructive' })
     }
   }
 
   useEffect(() => {
-    loadCompanies()
-  }, [defaultTab])
+    loadData()
+  }, [])
 
-  const handleSave = async () => {
-    if (!formData.name || !formData.bin_prefix || !formData.commission_rate) {
-      toast({
-        title: 'Campos obrigatórios',
-        description: 'Preencha todos os campos corretamente.',
-        variant: 'destructive',
+  useRealtime('companies', () => {
+    loadData()
+  })
+
+  const handleOpenDialog = (company?: Company) => {
+    if (company) {
+      setEditingCompany(company)
+      form.reset({
+        name: company.name,
+        bin_prefix: company.bin_prefix,
+        commission_rate: company.commission_rate,
+        modality: company.modality,
+        gateway_provider: company.gateway_provider,
+        status: company.status,
+        cnpj: company.cnpj || '',
+        address: company.address || '',
+        zip_code: company.zip_code || '',
+        phone: company.phone || '',
+        whatsapp: company.whatsapp || '',
+        responsible_name: company.responsible_name || '',
       })
-      return
+    } else {
+      setEditingCompany(null)
+      form.reset({
+        name: '',
+        bin_prefix: '',
+        commission_rate: 0.005,
+        modality: 'both',
+        gateway_provider: 'Asaas',
+        status: 'active',
+        cnpj: '',
+        address: '',
+        zip_code: '',
+        phone: '',
+        whatsapp: '',
+        responsible_name: '',
+      })
     }
+    setSelectedFile(null)
+    setIsDialogOpen(true)
+  }
 
-    setIsSaving(true)
+  const onSubmit = async (values: FormValues) => {
     try {
-      const data = new FormData()
-      data.append('name', formData.name)
-      data.append('bin_prefix', formData.bin_prefix)
-      data.append('commission_rate', formData.commission_rate)
-      data.append('modality', formData.modality)
-      data.append('gateway_provider', formData.gateway_provider)
-      data.append('status', formData.status)
-      if (logoFile) {
-        data.append('logo', logoFile)
+      const formData = new FormData()
+      Object.entries(values).forEach(([key, value]) => {
+        if (value !== undefined) formData.append(key, String(value))
+      })
+
+      if (selectedFile) {
+        formData.append('logo', selectedFile)
       }
 
-      if (editingId) {
-        await pb.collection('companies').update(editingId, data)
-        toast({ title: 'Sucesso', description: 'Empresa atualizada com sucesso.' })
+      if (editingCompany) {
+        await updateCompany(editingCompany.id, formData)
+        toast({ title: 'Empresa atualizada com sucesso' })
       } else {
-        await pb.collection('companies').create(data)
-        toast({ title: 'Sucesso', description: 'Empresa criada com sucesso.' })
+        await createCompany(formData)
+        toast({ title: 'Empresa criada com sucesso' })
       }
       setIsDialogOpen(false)
-      loadCompanies()
-      resetForm()
-    } catch (err: any) {
-      toast({
-        title: 'Erro ao salvar',
-        description: err.message || 'Verifique os dados e tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSaving(false)
+      loadData()
+    } catch (err) {
+      const fieldErrors = extractFieldErrors(err)
+      if (Object.keys(fieldErrors).length > 0) {
+        Object.entries(fieldErrors).forEach(([field, msg]) => {
+          form.setError(field as any, { message: msg })
+        })
+      } else {
+        toast({ title: 'Erro ao salvar os dados', variant: 'destructive' })
+      }
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta empresa?')) return
+    if (!confirm('Deseja realmente mover esta empresa para a lixeira?')) return
     try {
-      await pb.collection('companies').update(id, { deleted_at: new Date().toISOString() })
-      toast({ title: 'Sucesso', description: 'Empresa movida para a lixeira.' })
-      loadCompanies()
+      await softDeleteCompany(id)
+      toast({ title: 'Empresa removida com sucesso' })
+      loadData()
     } catch (err) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível excluir a empresa.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      bin_prefix: '',
-      commission_rate: '',
-      modality: '1',
-      gateway_provider: 'Asaas',
-      status: 'active',
-    })
-    setLogoFile(null)
-    setLogoPreview('')
-    setEditingId(null)
-  }
-
-  const openEdit = (company: any) => {
-    setFormData({
-      name: company.name || '',
-      bin_prefix: company.bin_prefix || '',
-      commission_rate: company.commission_rate?.toString() || '',
-      modality: company.modality || '1',
-      gateway_provider: company.gateway_provider || 'Asaas',
-      status: company.status || 'active',
-    })
-    if (company.logo) {
-      setLogoPreview(pb.files.getURL(company, company.logo))
-    } else {
-      setLogoPreview('')
-    }
-    setEditingId(company.id)
-    setIsDialogOpen(true)
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setLogoFile(file)
-      setLogoPreview(URL.createObjectURL(file))
+      toast({ title: 'Erro ao excluir a empresa', variant: 'destructive' })
     }
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {defaultTab === 'bins' ? 'Lixeira de Empresas' : 'Gestão de Empresas'}
-          </h1>
-          <p className="text-gray-500 mt-1">Gerencie as empresas cadastradas no sistema</p>
-        </div>
-
-        {defaultTab !== 'bins' && (
-          <Dialog
-            open={isDialogOpen}
-            onOpenChange={(open) => {
-              if (!open) resetForm()
-              setIsDialogOpen(open)
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" /> Nova Empresa
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>{editingId ? 'Editar Empresa' : 'Cadastrar Nova Empresa'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6 py-4">
-                <div className="flex flex-col items-center gap-4 p-4 border border-dashed rounded-lg bg-gray-50">
-                  {logoPreview ? (
-                    <img
-                      src={logoPreview}
-                      alt="Logo Preview"
-                      className="w-24 h-24 object-contain rounded-md bg-white border shadow-sm"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-white border rounded-md flex flex-col items-center justify-center text-gray-400 shadow-sm">
-                      <Building2 className="w-8 h-8 mb-1" />
-                      <span className="text-[10px]">Sem Logo</span>
-                    </div>
-                  )}
-                  <div>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <Label
-                      htmlFor="logo-upload"
-                      className="cursor-pointer inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />{' '}
-                      {logoPreview ? 'Alterar Logo' : 'Enviar Logo'}
-                    </Label>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Nome da Empresa</Label>
-                  <Input
-                    placeholder="Ex: Acme Corp"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Prefixo BIN</Label>
-                    <Input
-                      placeholder="Ex: 543210"
-                      value={formData.bin_prefix}
-                      onChange={(e) => setFormData({ ...formData, bin_prefix: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Taxa de Comissão (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Ex: 2.5"
-                      value={formData.commission_rate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, commission_rate: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Modalidade</Label>
-                    <Select
-                      value={formData.modality}
-                      onValueChange={(v) => setFormData({ ...formData, modality: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Fechada (1)</SelectItem>
-                        <SelectItem value="2">Aberta (2)</SelectItem>
-                        <SelectItem value="both">Ambas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Gateway de Pagamento</Label>
-                    <Select
-                      value={formData.gateway_provider}
-                      onValueChange={(v) => setFormData({ ...formData, gateway_provider: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Asaas">Asaas</SelectItem>
-                        <SelectItem value="Alternative">Alternativo</SelectItem>
-                        <SelectItem value="None/Manual">Manual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status Operacional</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(v) => setFormData({ ...formData, status: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Ativa</SelectItem>
-                      <SelectItem value="inactive">Inativa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                    disabled={isSaving}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {isSaving ? 'Salvando...' : 'Salvar'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Gestão de Empresas</h1>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-gray-50">
-            <TableRow>
-              <TableHead className="w-20">Logo</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>BIN</TableHead>
-              <TableHead>Modalidade</TableHead>
-              <TableHead>Status</TableHead>
-              {defaultTab !== 'bins' && <TableHead className="text-right">Ações</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                  Carregando...
-                </TableCell>
-              </TableRow>
-            ) : companies.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                  Nenhuma empresa encontrada.
-                </TableCell>
-              </TableRow>
-            ) : (
-              companies.map((c) => (
-                <TableRow key={c.id} className="group">
-                  <TableCell>
-                    {c.logo ? (
-                      <img
-                        src={pb.files.getURL(c, c.logo)}
-                        alt="Logo"
-                        className="w-10 h-10 object-contain rounded bg-gray-50 border"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-50 border rounded flex items-center justify-center">
-                        <Building2 className="w-4 h-4 text-gray-300" />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium text-gray-900">{c.name}</TableCell>
-                  <TableCell className="text-gray-600">{c.bin_prefix}</TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                      {c.modality === 'both' ? 'Ambas' : c.modality === '1' ? 'Fechada' : 'Aberta'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
-                    >
-                      {c.status === 'active' ? 'Ativa' : 'Inativa'}
-                    </span>
-                  </TableCell>
-                  {defaultTab !== 'bins' && (
+      <Tabs defaultValue={defaultTab}>
+        <TabsList className="bg-slate-100">
+          <TabsTrigger value="companies">Empresas</TabsTrigger>
+          <TabsTrigger value="bins">Histórico de BINs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="companies" className="space-y-4 pt-4">
+          <div className="flex justify-end">
+            <Button onClick={() => handleOpenDialog()} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="mr-2 h-4 w-4" /> Nova Empresa
+            </Button>
+          </div>
+
+          <div className="rounded-md border bg-white shadow-sm">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="w-[100px]">Logomarca</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>CNPJ</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.map((company) => (
+                  <TableRow key={company.id} className="hover:bg-slate-50 transition-colors">
+                    <TableCell>
+                      {company.logo ? (
+                        <img
+                          src={pb.files.getURL(company, company.logo, { thumb: '100x100' })}
+                          alt={`Logo ${company.name}`}
+                          className="h-10 w-10 object-contain rounded-md border bg-white"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 bg-slate-100 rounded-md border flex items-center justify-center text-slate-400">
+                          <ImageIcon className="h-5 w-5" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-900">{company.name}</TableCell>
+                    <TableCell className="text-slate-600">{company.cnpj || '-'}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${company.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                      >
+                        {company.status === 'active' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
-                          onClick={() => openEdit(c)}
-                          title="Editar"
+                          onClick={() => handleOpenDialog(company)}
                         >
-                          <Pencil className="w-4 h-4 text-blue-600" />
+                          <Edit className="h-4 w-4 text-slate-600" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="destructive"
                           size="icon"
-                          onClick={() => handleDelete(c.id)}
-                          title="Excluir"
+                          onClick={() => handleDelete(company.id)}
                         >
-                          <Trash className="w-4 h-4 text-red-600" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
+                  </TableRow>
+                ))}
+                {companies.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-10 text-slate-500">
+                      Nenhuma empresa cadastrada no sistema.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bins" className="pt-4">
+          <div className="rounded-md border bg-white p-12 text-center text-slate-500 shadow-sm">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+            <p className="text-lg font-medium text-slate-700">Aba de Histórico de BINs</p>
+            <p className="text-sm mt-1">Esta funcionalidade está em desenvolvimento.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {editingCompany ? 'Editar Empresa' : 'Nova Empresa'}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados abaixo para {editingCompany ? 'atualizar' : 'cadastrar'} a empresa.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Empresa *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Supermercado V Club" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                />
+
+                <FormItem>
+                  <FormLabel>Logomarca</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      className="cursor-pointer"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    />
+                  </FormControl>
+                  <p className="text-[0.8rem] text-slate-500 mt-1">
+                    Formatos suportados: JPG, PNG. O envio substituirá a imagem atual.
+                  </p>
+                </FormItem>
+
+                <FormField
+                  control={form.control}
+                  name="cnpj"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CNPJ</FormLabel>
+                      <FormControl>
+                        <Input placeholder="00.000.000/0000-00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="responsible_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Responsável</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo do diretor/gerente" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone Fixo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(00) 0000-0000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="whatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(00) 90000-0000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="zip_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP</FormLabel>
+                      <FormControl>
+                        <Input placeholder="00000-000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Endereço Completo</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Rua, Número, Complemento, Bairro, Cidade - UF"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="col-span-1 md:col-span-2 border-t pt-4 mt-2">
+                  <h4 className="text-sm font-semibold text-slate-900 mb-4">
+                    Configurações Financeiras e Gateway
+                  </h4>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="bin_prefix"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prefixo BIN *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: 603587" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="commission_rate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Taxa de Comissão *</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.0001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="modality"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modalidade *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a modalidade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">Modalidade 1 (Crédito)</SelectItem>
+                          <SelectItem value="2">Modalidade 2 (Benefício)</SelectItem>
+                          <SelectItem value="both">Ambas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="gateway_provider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provedor de Gateway *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o provedor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Asaas">Asaas</SelectItem>
+                          <SelectItem value="Alternative">Alternativo</SelectItem>
+                          <SelectItem value="None/Manual">Nenhum / Manual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Status *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="max-w-[200px]">
+                            <SelectValue placeholder="Selecione o status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Ativo (Permitir Operações)</SelectItem>
+                          <SelectItem value="inactive">Inativo (Bloqueado)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter className="mt-8 pt-4 border-t gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  Salvar Dados da Empresa
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

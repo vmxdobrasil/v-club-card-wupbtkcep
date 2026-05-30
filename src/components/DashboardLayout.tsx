@@ -1,77 +1,119 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import { Button } from '@/components/ui/button'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from '@/components/ui/sidebar'
+import { LayoutDashboard, FileText, Bot, Package, LogOut } from 'lucide-react'
 
-export function DashboardLayout({ role }: { role: string }) {
+export function DashboardLayout({ role }: { role: 'company' | 'holder' | 'partner' }) {
   const { signOut } = useAuth()
   const location = useLocation()
 
   return (
-    <div className="min-h-screen flex w-full">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0">
-        <div className="p-6 flex items-center justify-center border-b border-slate-800">
-          <img
-            src="/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg"
-            alt="V Club Card"
-            className="h-16 w-auto object-contain rounded"
-            onError={(e) => {
-              e.currentTarget.src = 'https://img.usecurling.com/i?q=vclub&color=blue&shape=fill'
-            }}
-          />
-        </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Link
-            to={`/${role}`}
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === `/${role}` ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Dashboard
-          </Link>
-          {role === 'company' && (
-            <>
-              <Link
-                to="/company/catalogos"
-                className={`block px-4 py-2.5 rounded transition-colors ${location.pathname.includes('/catalogos') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-              >
-                Catalogs
-              </Link>
-              <Link
-                to="/company/ai-agent"
-                className={`block px-4 py-2.5 rounded transition-colors ${location.pathname.includes('/ai-agent') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-              >
-                AI Agent
-              </Link>
-            </>
-          )}
-          {role === 'partner' && (
-            <>
-              <Link
-                to="/partner/products"
-                className={`block px-4 py-2.5 rounded transition-colors ${location.pathname.includes('/products') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-              >
-                Products
-              </Link>
-              <Link
-                to="/partner/catalogos"
-                className={`block px-4 py-2.5 rounded transition-colors ${location.pathname.includes('/catalogos') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-              >
-                Catalogs
-              </Link>
-            </>
-          )}
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
-            onClick={signOut}
-          >
-            Logout
-          </Button>
-        </div>
-      </aside>
-      <main className="flex-1 bg-slate-50 overflow-y-auto w-full">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-slate-50">
+        <Sidebar className="border-r border-sidebar-border">
+          <SidebarHeader className="flex flex-col items-center justify-center p-6 border-b border-sidebar-border">
+            <h2 className="text-2xl font-black text-blue-900 tracking-tighter">V CLUB CARD</h2>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
+              PAINEL {role === 'company' ? 'EMPRESA' : role === 'holder' ? 'PORTADOR' : 'PARCEIRO'}
+            </p>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-4 py-2 mt-2 text-xs font-medium text-slate-400">
+                MENU PRINCIPAL
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.pathname === `/${role}`}>
+                      <Link to={`/${role}`}>
+                        <LayoutDashboard className="mr-3 h-4 w-4" />
+                        <span className="font-medium">Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {role === 'company' && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === '/company/catalogos'}
+                        >
+                          <Link to="/company/catalogos">
+                            <FileText className="mr-3 h-4 w-4" />
+                            <span className="font-medium">Catálogos</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === '/company/ai-agent'}
+                        >
+                          <Link to="/company/ai-agent">
+                            <Bot className="mr-3 h-4 w-4" />
+                            <span className="font-medium">Agente IA</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                  {role === 'partner' && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === '/partner/products'}
+                        >
+                          <Link to="/partner/products">
+                            <Package className="mr-3 h-4 w-4" />
+                            <span className="font-medium">Produtos</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === '/partner/catalogos'}
+                        >
+                          <Link to="/partner/catalogos">
+                            <FileText className="mr-3 h-4 w-4" />
+                            <span className="font-medium">Catálogos</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="p-4 border-t border-sidebar-border">
+            <button
+              onClick={signOut}
+              className="flex w-full items-center justify-center rounded-md bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-600 hover:text-white transition-colors"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair do Sistema
+            </button>
+          </SidebarFooter>
+        </Sidebar>
+        <main className="flex-1 overflow-auto p-8 relative">
+          <Outlet />
+        </main>
+      </div>
+    </SidebarProvider>
   )
 }

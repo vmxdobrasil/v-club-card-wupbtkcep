@@ -1,70 +1,53 @@
 import pb from '@/lib/pocketbase/client'
 import type { RecordModel } from 'pocketbase'
 
+export interface Company extends RecordModel {
+  name: string
+  logo?: string
+  bin_prefix: string
+  commission_rate: number
+  modality: '1' | '2' | 'both'
+  gateway_provider: 'Asaas' | 'Alternative' | 'None/Manual'
+  status: 'active' | 'inactive'
+  owner_id?: string
+  asaas_wallet_id?: string
+  deleted_at?: string
+  cnpj?: string
+  address?: string
+  zip_code?: string
+  phone?: string
+  whatsapp?: string
+  responsible_name?: string
+}
+
 export const getCompanies = async () => {
-  return await pb.collection('companies').getFullList({
+  return pb.collection<Company>('companies').getFullList({
     sort: '-created',
+    filter: "deleted_at = ''",
   })
 }
 
-export const getCompany = async (id: string) => {
-  return await pb.collection('companies').getOne(id)
-}
-
-export const getMyCompany = async () => {
-  const user = pb.authStore.record
-  if (!user) throw new Error('Not authenticated')
-
-  if (user.company) {
-    return await pb.collection('companies').getOne(user.company)
+export const getBinLogs = async () => {
+  try {
+    return await pb
+      .collection('bin_logs')
+      .getFullList({ sort: '-created', expand: 'company_id,changed_by' })
+  } catch {
+    return []
   }
-
-  // Fallback to getting the first company the user has access to via RLS
-  return await pb.collection('companies').getFirstListItem('')
 }
 
-export const createCompany = async (data: Record<string, any>) => {
-  const formData = new FormData()
-
-  Object.keys(data).forEach((key) => {
-    const value = data[key]
-    if (value !== undefined && value !== null) {
-      if (key === 'logo' && value instanceof File) {
-        formData.append('logo', value)
-      } else if (key !== 'logo') {
-        formData.append(key, String(value))
-      }
-    }
-  })
-
-  return await pb.collection('companies').create(formData)
+export const createCompany = async (data: FormData) => {
+  return pb.collection<Company>('companies').create(data)
 }
 
-export const updateCompany = async (id: string, data: Record<string, any>) => {
-  const formData = new FormData()
-
-  Object.keys(data).forEach((key) => {
-    const value = data[key]
-    if (value !== undefined && value !== null) {
-      if (key === 'logo' && value instanceof File) {
-        formData.append('logo', value)
-      } else if (key === 'logo' && typeof value === 'string' && value === '') {
-        // Lida com exclusão da logo se string vazia
-        formData.append('logo', '')
-      } else if (key !== 'logo') {
-        formData.append(key, String(value))
-      }
-    }
-  })
-
-  return await pb.collection('companies').update(id, formData)
+export const updateCompany = async (id: string, data: FormData) => {
+  return pb.collection<Company>('companies').update(id, data)
 }
 
-export const deleteCompany = async (id: string) => {
-  return await pb.collection('companies').delete(id)
-}
-
-export const getLogoUrl = (record: RecordModel, filename: string) => {
-  if (!filename) return ''
-  return pb.files.getURL(record, filename)
+export const softDeleteCompany = async (id: string) => {
+  const data = new FormData()
+  data.append('deleted_at', new Date().toISOString())
+  data.append('status', 'inactive')
+  return pb.collection<Company>('companies').update(id, data)
 }
