@@ -51,3 +51,16 @@ export const softDeleteCompany = async (id: string) => {
   data.append('status', 'inactive')
   return pb.collection<Company>('companies').update(id, data)
 }
+
+export const getMyCompany = async () => {
+  const userId = pb.authStore.record?.id
+  if (!userId) throw new Error('Usuário não autenticado')
+
+  try {
+    return await pb
+      .collection<Company>('companies')
+      .getFirstListItem(`owner_id = "${userId}" && deleted_at = ""`)
+  } catch (error) {
+    throw new Error('Empresa não encontrada ou você não tem permissão.')
+  }
+}
