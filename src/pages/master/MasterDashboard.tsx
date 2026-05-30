@@ -1,76 +1,75 @@
-import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AIChatWidget } from '@/components/AIChatWidget'
-import pb from '@/lib/pocketbase/client'
+import { Link } from 'react-router-dom'
+import { Building2, Users, Package, ShoppingBag } from 'lucide-react'
 
-export default function MasterDashboard() {
-  const [stats, setStats] = useState({
-    companies: 0,
-    holders: 0,
-    products: 0,
-  })
-
-  useEffect(() => {
-    Promise.all([
-      pb.collection('companies').getList(1, 1),
-      pb.collection('card_holders').getList(1, 1),
-      pb.collection('products').getList(1, 1),
-    ])
-      .then(([comp, hold, prod]) => {
-        setStats({
-          companies: comp.totalItems,
-          holders: hold.totalItems,
-          products: prod.totalItems,
-        })
-      })
-      .catch(console.error)
-  }, [])
+const MasterDashboard = () => {
+  const { user } = useAuth()
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-slate-800">System Dashboard</h1>
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Total Companies</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-slate-800">{stats.companies}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Card Holders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-slate-800">{stats.holders}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Active Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-slate-800">{stats.products}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="bg-white rounded-lg border p-12 text-center text-slate-500">
-        <h2 className="text-2xl font-semibold mb-3 text-slate-800">
-          Welcome to V Club Card Administration
-        </h2>
-        <p className="max-w-2xl mx-auto mb-4">
-          Use the side menu to seamlessly manage companies, catalogs, card holders, and monitor all
-          operational metrics from one place.
-        </p>
-        <p className="mt-4 text-sm bg-slate-50 inline-block px-4 py-2 rounded-full border">
-          💡 <strong>Pro Tip:</strong> Open the AI Assistant at the bottom right corner for system
-          prompts and configuration guides.
+    <div className="p-8 space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Painel Principal</h1>
+        <p className="text-muted-foreground">
+          Bem-vindo de volta, {user?.name || 'Administrador'}. Aqui está o resumo do seu sistema.
         </p>
       </div>
 
-      <AIChatWidget />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Empresas</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Gerenciar</div>
+            <Link to="/companies" className="text-xs text-blue-600 hover:underline">
+              Ver todas as empresas
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Parceiros</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Gerenciar</div>
+            <Link to="/partners" className="text-xs text-blue-600 hover:underline">
+              Ver todos os parceiros
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Catálogos</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Gerenciar</div>
+            <Link to="/catalogos" className="text-xs text-blue-600 hover:underline">
+              Ver catálogos
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Produtos</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Gerenciar</div>
+            <Link to="/products" className="text-xs text-blue-600 hover:underline">
+              Ver produtos
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
+
+export default MasterDashboard

@@ -3,16 +3,12 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
+import { useToast } from '@/hooks/use-toast'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -21,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useToast } from '@/hooks/use-toast'
 import {
   Dialog,
   DialogContent,
@@ -37,344 +32,276 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
 const companySchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  bin_prefix: z.string().min(1, 'BIN Prefix is required'),
-  commission_rate: z.coerce.number().min(0),
+  name: z.string().min(1, 'Razão Social / Nome é obrigatório'),
+  cnpj: z.string().optional(),
+  bin_prefix: z.string().min(1, 'Prefixo BIN é obrigatório'),
+  commission_rate: z.coerce.number().min(0.00025).max(0.01),
   modality: z.enum(['1', '2', 'both']),
   gateway_provider: z.enum(['Asaas', 'Alternative', 'None/Manual']),
   status: z.enum(['active', 'inactive']),
-  cnpj: z
-    .string()
-    .regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$|^\d{14}$/, 'Invalid CNPJ format')
-    .optional()
-    .or(z.literal('')),
-  address: z.string().optional(),
-  zip_code: z.string().optional(),
-  phone: z.string().optional(),
-  responsible_name: z.string().optional(),
 })
+type CompanyFormValues = z.infer<typeof companySchema>
 
 export default function MasterCompaniesPage({ defaultTab = 'companies' }: { defaultTab?: string }) {
   const [companies, setCompanies] = useState<any[]>([])
-  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { toast } = useToast()
 
-  const form = useForm<z.infer<typeof companySchema>>({
+  const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
     defaultValues: {
       name: '',
+      cnpj: '',
       bin_prefix: '',
-      commission_rate: 0,
-      modality: '1',
+      commission_rate: 0.01,
+      modality: 'both',
       gateway_provider: 'Asaas',
       status: 'active',
-      cnpj: '',
-      address: '',
-      zip_code: '',
-      phone: '',
-      responsible_name: '',
     },
   })
+
+  const loadCompanies = async () => {
+    try {
+      setCompanies(await pb.collection('companies').getFullList({ sort: '-created' }))
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao carregar empresas.', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     loadCompanies()
   }, [])
+  useRealtime('companies', () => {
+    loadCompanies()
+  })
 
-  const loadCompanies = async () => {
+  const onSubmit = async (data: CompanyFormValues) => {
     try {
-      const records = await pb.collection('companies').getFullList({ sort: '-created' })
-      setCompanies(records)
-    } catch (e) {
-      console.error(e)
-    }
-  }
+      const formData = new FormData()
+      Object.entries(data).forEach(([key, value]) => formData.append(key, value as string))
+      if (selectedFile) formData.append('logo', selectedFile)
 
-  const onSubmit = async (data: z.infer<typeof companySchema>) => {
-    try {
-      await pb.collection('companies').create(data)
-      toast({ title: 'Company created successfully' })
-      setOpen(false)
+      await pb.collection('companies').create(formData)
+      toast({ title: 'Sucesso', description: 'Empresa salva com sucesso!' })
+      setIsDialogOpen(false)
       form.reset()
-      loadCompanies()
-    } catch (e: any) {
-      const fieldErrors = extractFieldErrors(e)
-      if (Object.keys(fieldErrors).length > 0) {
-        Object.entries(fieldErrors).forEach(([field, msg]) => {
-          form.setError(field as any, { message: msg })
-        })
-      } else {
-        toast({ title: 'Error creating company', description: e.message, variant: 'destructive' })
-      }
+      setSelectedFile(null)
+    } catch (err: any) {
+      Object.entries(extractFieldErrors(err)).forEach(([field, msg]) =>
+        form.setError(field as any, { message: msg }),
+      )
+      toast({ title: 'Erro', description: 'Falha ao salvar a empresa.', variant: 'destructive' })
     }
   }
+
+  const activeCompanies = companies.filter((c) => !c.deleted_at)
+  const binCompanies = companies.filter((c) => c.deleted_at)
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-slate-800">Company Management</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+    <div className="p-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Gerenciamento de Empresas</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">Add Company</Button>
+            <Button>Cadastrar Empresa</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>New Company</DialogTitle>
+              <DialogTitle>Nova Empresa</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="cnpj"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CNPJ</FormLabel>
-                        <FormControl>
-                          <Input placeholder="00.000.000/0000-00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bin_prefix"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>BIN Prefix</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="commission_rate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Commission Rate (%)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="zip_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Zip Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="responsible_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Responsible Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="modality"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Modality</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select modality" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="1">1</SelectItem>
-                            <SelectItem value="2">2</SelectItem>
-                            <SelectItem value="both">Both</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="gateway_provider"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gateway</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select gateway" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Asaas">Asaas</SelectItem>
-                            <SelectItem value="Alternative">Alternative</SelectItem>
-                            <SelectItem value="None/Manual">None/Manual</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Logo</Label>
+                <Input
+                  type="file"
+                  accept="image/jpeg, image/png"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Razão Social / Nome</Label>
+                <Input {...form.register('name')} />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <Input {...form.register('cnpj')} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Prefixo BIN</Label>
+                  <Input {...form.register('bin_prefix')} />
+                  {form.formState.errors.bin_prefix && (
+                    <p className="text-sm text-red-500">
+                      {form.formState.errors.bin_prefix.message}
+                    </p>
+                  )}
                 </div>
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                  Save Company
-                </Button>
-              </form>
-            </Form>
+                <div className="space-y-2">
+                  <Label>Taxa (ex: 0.01)</Label>
+                  <Input type="number" step="0.0001" {...form.register('commission_rate')} />
+                  {form.formState.errors.commission_rate && (
+                    <p className="text-sm text-red-500">
+                      {form.formState.errors.commission_rate.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Modalidade</Label>
+                  <Select
+                    onValueChange={(v) => form.setValue('modality', v as any)}
+                    defaultValue={form.getValues('modality')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="both">Ambas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Gateway</Label>
+                  <Select
+                    onValueChange={(v) => form.setValue('gateway_provider', v as any)}
+                    defaultValue={form.getValues('gateway_provider')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Asaas">Asaas</SelectItem>
+                      <SelectItem value="Alternative">Alternativo</SelectItem>
+                      <SelectItem value="None/Manual">Nenhum/Manual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Situação</Label>
+                <Select
+                  onValueChange={(v) => form.setValue('status', v as any)}
+                  defaultValue={form.getValues('status')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full">
+                Salvar
+              </Button>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <Tabs defaultValue={defaultTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="companies">Companies</TabsTrigger>
-          <TabsTrigger value="bins">BINs Overview</TabsTrigger>
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="companies">Ativas</TabsTrigger>
+          <TabsTrigger value="bins">Lixeira</TabsTrigger>
         </TabsList>
-        <TabsContent value="companies">
-          <div className="bg-white rounded-md border shadow-sm">
-            <Table>
-              <TableHeader>
+        <TabsContent value="companies" className="mt-4 border rounded-md bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Logo</TableHead>
+                <TableHead>Razão Social</TableHead>
+                <TableHead>CNPJ</TableHead>
+                <TableHead>Prefixo BIN</TableHead>
+                <TableHead>Comissão</TableHead>
+                <TableHead>Situação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>CNPJ</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Gateway</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableCell colSpan={6} className="text-center">
+                    Carregando...
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((c) => (
+              ) : activeCompanies.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Nenhuma empresa encontrada.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                activeCompanies.map((c) => (
                   <TableRow key={c.id}>
+                    <TableCell>
+                      {c.logo ? (
+                        <img
+                          src={pb.files.getURL(c, c.logo)}
+                          alt={c.name}
+                          className="h-8 w-auto object-contain rounded"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 bg-muted flex items-center justify-center text-xs text-muted-foreground rounded">
+                          Sem logo
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-slate-600">{c.cnpj || '-'}</TableCell>
-                    <TableCell className="text-slate-600">{c.phone || '-'}</TableCell>
-                    <TableCell>{c.gateway_provider}</TableCell>
+                    <TableCell>{c.cnpj || '-'}</TableCell>
+                    <TableCell>{c.bin_prefix}</TableCell>
+                    <TableCell>{(c.commission_rate * 100).toFixed(2)}%</TableCell>
                     <TableCell>
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}`}
+                        className={`px-2 py-1 rounded text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
                       >
-                        {c.status}
+                        {c.status === 'active' ? 'Ativo' : 'Inativo'}
                       </span>
                     </TableCell>
                   </TableRow>
-                ))}
-                {companies.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                      No companies found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </TabsContent>
-        <TabsContent value="bins">
-          <div className="bg-white rounded-md border shadow-sm">
-            <Table>
-              <TableHeader>
+        <TabsContent value="bins" className="mt-4 border rounded-md bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Razão Social</TableHead>
+                <TableHead>Prefixo BIN</TableHead>
+                <TableHead>Data de Exclusão</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {binCompanies.length === 0 ? (
                 <TableRow>
-                  <TableHead>Company</TableHead>
-                  <TableHead>BIN Prefix</TableHead>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    Nenhuma empresa na lixeira.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((c) => (
+              ) : (
+                binCompanies.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="font-mono">{c.bin_prefix}</TableCell>
+                    <TableCell>{c.bin_prefix}</TableCell>
+                    <TableCell>{new Date(c.deleted_at).toLocaleDateString('pt-BR')}</TableCell>
                   </TableRow>
-                ))}
-                {companies.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={2} className="text-center py-12 text-muted-foreground">
-                      No data found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </TabsContent>
       </Tabs>
     </div>
