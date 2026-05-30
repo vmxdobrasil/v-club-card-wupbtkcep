@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, CreditCard, CheckCircle, Ban } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -10,165 +12,152 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { getCardHolders, getCompanies } from '@/services/card_holders'
-import { CardHolderForm } from './components/CardHolderForm'
-import pb from '@/lib/pocketbase/client'
+import { HolderForm } from '@/pages/master/HolderForm'
 
 export default function MasterHoldersPage() {
   const [holders, setHolders] = useState<any[]>([])
-  const [filtered, setFiltered] = useState<any[]>([])
-  const [companies, setCompanies] = useState<any[]>([])
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [isAddOpen, setIsAddOpen] = useState(false)
 
-  const loadData = async () => {
+  const loadHolders = async () => {
     try {
-      const [hRes, cRes] = await Promise.all([getCardHolders(), getCompanies()])
-      setHolders(hRes)
-      setFiltered(hRes)
-      setCompanies(cRes)
-    } catch (err) {
-      console.error('Failed to load data', err)
+      const records = await pb.collection('card_holders').getFullList({
+        expand: 'user_id,company_id',
+        sort: '-created',
+      })
+      setHolders(records)
+    } catch (error) {
+      console.error(error)
     }
   }
 
   useEffect(() => {
-    loadData()
+    loadHolders()
   }, [])
+  useRealtime('card_holders', () => {
+    loadHolders()
+  })
 
-  useEffect(() => {
-    const term = searchTerm.toLowerCase()
-    setFiltered(
-      holders.filter(
-        (h) =>
-          h.expand?.user_id?.name?.toLowerCase().includes(term) ||
-          h.cpf?.includes(term) ||
-          h.expand?.company_id?.name?.toLowerCase().includes(term),
-      ),
-    )
-  }, [searchTerm, holders])
-
-  const getAvatarUrl = (user: any) => {
-    return user?.avatar
-      ? `${import.meta.env.VITE_POCKETBASE_URL}/api/files/users/${user.id}/${user.avatar}`
-      : ''
-  }
+  const activeCount = holders.filter((h) => h.status === 'active').length
+  const blockedCount = holders.filter((h) => h.status === 'blocked').length
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Portadores de Cartão</h1>
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Portadores de Cartão</h1>
+          <p className="text-muted-foreground mt-1">
+            Gestão de titulares e cartões co-branded emitidos.
+          </p>
+        </div>
+        <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
           <SheetTrigger asChild>
             <Button>
-              <Plus className="w-4 h-4 mr-2" /> Novo Portador
+              <Plus className="w-4 h-4 mr-2" /> Novo Titular
             </Button>
           </SheetTrigger>
-          <SheetContent className="sm:max-w-[600px] overflow-y-auto">
+          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Cadastrar Novo Portador</SheetTitle>
+              <SheetTitle>Cadastrar Novo Titular</SheetTitle>
             </SheetHeader>
             <div className="mt-6">
-              <CardHolderForm
-                companies={companies}
-                holders={holders}
-                onSuccess={() => {
-                  setIsOpen(false)
-                  loadData()
-                }}
-              />
+              <HolderForm onSuccess={() => setIsAddOpen(false)} />
             </div>
           </SheetContent>
         </Sheet>
       </div>
 
-      <div className="flex items-center space-x-2 max-w-sm">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Buscar por nome, CPF ou empresa..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Cartões Emitidos</CardTitle>
+            <CreditCard className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{holders.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cartões Ativos</CardTitle>
+            <CheckCircle className="w-4 h-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cartões Bloqueados</CardTitle>
+            <Ban className="w-4 h-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{blockedCount}</div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="border rounded-md bg-white overflow-hidden">
+      <Card>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Portador</TableHead>
+              <TableHead>Titular</TableHead>
+              <TableHead>Empresa Parceira</TableHead>
               <TableHead>CPF</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Tipo / Fonte</TableHead>
-              <TableHead>Limite</TableHead>
+              <TableHead>Cartão Gerado</TableHead>
+              <TableHead>Limite de Crédito</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-gray-500">
-                  Nenhum portador encontrado.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((holder) => (
+            {holders.map((holder) => {
+              const user = holder.expand?.user_id
+              const avatarUrl = user?.avatar
+                ? pb.files.getURL(user, user.avatar, { thumb: '100x100' })
+                : undefined
+
+              return (
                 <TableRow key={holder.id}>
                   <TableCell className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={getAvatarUrl(holder.expand?.user_id)} />
-                      <AvatarFallback>
-                        {holder.expand?.user_id?.name?.charAt(0) || 'U'}
+                    <Avatar>
+                      {avatarUrl && <AvatarImage src={avatarUrl} />}
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-900">
-                        {holder.expand?.user_id?.name || 'Sem nome'}
-                      </span>
-                      {holder.parent_holder_id && (
-                        <span className="text-xs text-gray-500">
-                          Dep. de:{' '}
-                          {holder.expand?.parent_holder_id?.expand?.user_id?.name || 'Desconhecido'}
-                        </span>
-                      )}
+                    <div>
+                      <div className="font-medium text-sm">{user?.name}</div>
+                      <div className="text-xs text-muted-foreground">{user?.email}</div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-600">{holder.cpf || '-'}</TableCell>
-                  <TableCell>{holder.expand?.company_id?.name || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1 items-start">
-                      <Badge variant="outline" className="text-[10px]">
-                        {holder.card_type === 'virtual_only' ? 'Virtual' : 'Físico + Virtual'}
-                      </Badge>
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-100"
-                      >
-                        {holder.credit_source === 'asaas' ? 'Asaas' : 'Crédito Próprio'}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium text-green-700">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      holder.total_limit || 0,
+                  <TableCell>{holder.expand?.company_id?.name || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{holder.cpf}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {holder.card_number || (
+                      <span className="text-muted-foreground italic">Aguardando BIN...</span>
                     )}
                   </TableCell>
+                  <TableCell className="font-medium">R$ {holder.total_limit?.toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge variant={holder.status === 'active' ? 'default' : 'destructive'}>
-                      {holder.status === 'active' ? 'Ativo' : holder.status}
+                      {holder.status === 'active' ? 'Ativo' : 'Bloqueado'}
                     </Badge>
                   </TableCell>
                 </TableRow>
-              ))
+              )
+            })}
+            {holders.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Nenhum titular cadastrado no sistema.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
+      </Card>
     </div>
   )
 }
