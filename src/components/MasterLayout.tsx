@@ -1,123 +1,91 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarProvider,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-} from '@/components/ui/sidebar'
-import { Building2, Trash2, Users, Package, FileText, LayoutDashboard, LogOut } from 'lucide-react'
+  Building,
+  CreditCard,
+  Users,
+  LayoutDashboard,
+  Package,
+  Trash2,
+  LogOut,
+  Menu,
+} from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet'
+
+const NAV_ITEMS = [
+  { path: '/master', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/companies', label: 'Empresas', icon: Building },
+  { path: '/bin', label: 'BINs', icon: CreditCard },
+  { path: '/partners', label: 'Parceiros', icon: Users },
+  { path: '/products', label: 'Produtos', icon: Package },
+  { path: '/catalogos', label: 'Catálogos', icon: Package },
+  { path: '/usuarios', label: 'Usuários', icon: Users },
+  { path: '/lixeira', label: 'Lixeira', icon: Trash2 },
+]
 
 export function MasterLayout() {
   const { signOut } = useAuth()
   const location = useLocation()
 
+  const NavLinks = () => (
+    <>
+      {NAV_ITEMS.map((item) => (
+        <Link
+          key={item.path}
+          to={item.path}
+          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+            location.pathname === item.path
+              ? 'bg-primary text-primary-foreground'
+              : 'hover:bg-muted'
+          }`}
+        >
+          <item.icon className="h-5 w-5" />
+          {item.label}
+        </Link>
+      ))}
+      <Button
+        variant="ghost"
+        className="justify-start gap-3 px-3 py-2 mt-auto text-red-500 hover:text-red-600 hover:bg-red-50"
+        onClick={signOut}
+      >
+        <LogOut className="h-5 w-5" />
+        Sair
+      </Button>
+    </>
+  )
+
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-slate-50">
-        <Sidebar className="border-r border-sidebar-border">
-          <SidebarHeader className="flex items-center justify-center p-6 border-b border-sidebar-border">
-            <h2 className="text-2xl font-black text-blue-900 tracking-tighter">V CLUB CARD</h2>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">
-              Master Admin
-            </p>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel className="px-4 py-2 mt-2 text-xs font-medium text-slate-400">
-                MENU PRINCIPAL
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/master'}>
-                      <Link to="/master">
-                        <LayoutDashboard className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Dashboard</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/companies'}>
-                      <Link to="/companies">
-                        <Building2 className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Empresas</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/bin'}>
-                      <Link to="/bin">
-                        <FileText className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Gestão de BIN</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/partners'}>
-                      <Link to="/partners">
-                        <Users className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Parceiros</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/products'}>
-                      <Link to="/products">
-                        <Package className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Produtos</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/catalogos'}>
-                      <Link to="/catalogos">
-                        <FileText className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Catálogos</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/usuarios'}>
-                      <Link to="/usuarios">
-                        <Users className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Portadores</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/lixeira'}>
-                      <Link to="/lixeira">
-                        <Trash2 className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Lixeira</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t border-sidebar-border">
-            <button
-              onClick={signOut}
-              className="flex w-full items-center justify-center rounded-md bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-600 hover:text-white transition-colors"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair do Sistema
-            </button>
-          </SidebarFooter>
-        </Sidebar>
-        <main className="flex-1 overflow-auto p-8 relative">
+    <div className="flex min-h-screen bg-gray-50/50">
+      <aside className="hidden md:flex w-64 flex-col border-r bg-background p-4 space-y-2">
+        <div className="mb-6 px-3">
+          <h2 className="text-2xl font-bold tracking-tight">Master Admin</h2>
+        </div>
+        <NavLinks />
+      </aside>
+
+      <div className="flex-1 flex flex-col">
+        <header className="flex md:hidden h-14 items-center border-b bg-background px-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 flex flex-col p-4 space-y-2">
+              <SheetHeader className="text-left mb-4">
+                <SheetTitle className="text-xl font-bold tracking-tight">Master Admin</SheetTitle>
+              </SheetHeader>
+              <NavLinks />
+            </SheetContent>
+          </Sheet>
+          <span className="font-semibold">V Club Card</span>
+        </header>
+
+        <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
       </div>
-    </SidebarProvider>
+    </div>
   )
 }

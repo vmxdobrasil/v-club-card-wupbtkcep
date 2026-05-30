@@ -1,74 +1,96 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import heroImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-c80d5.jpeg'
+import { CreditCard, CheckCircle2, ShieldCheck, Zap } from 'lucide-react'
 
 export default function Index() {
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <header className="px-6 py-4 flex items-center justify-between bg-white shadow-sm">
-        <div className="font-black text-2xl text-blue-900 tracking-tighter">V CLUB CARD</div>
-        <nav className="flex gap-4">
-          <Link to="/master">
-            <Button variant="ghost" className="font-semibold text-slate-600 hover:text-blue-900">
-              Painel Master
-            </Button>
-          </Link>
-          <Link to="/company">
-            <Button variant="ghost" className="font-semibold text-slate-600 hover:text-blue-900">
-              Painel Empresa
-            </Button>
-          </Link>
-          <Link to="/holder">
-            <Button variant="ghost" className="font-semibold text-slate-600 hover:text-blue-900">
-              Painel Portador
-            </Button>
-          </Link>
-          <Link to="/partner">
-            <Button variant="ghost" className="font-semibold text-slate-600 hover:text-blue-900">
-              Painel Parceiro
-            </Button>
+    <div className="flex flex-col min-h-screen">
+      <header className="px-4 lg:px-6 h-16 flex items-center border-b">
+        <Link to="/" className="flex items-center justify-center gap-2">
+          <CreditCard className="h-6 w-6 text-primary" />
+          <span className="font-bold text-xl">V Club Card</span>
+        </Link>
+        <nav className="ml-auto flex gap-4 sm:gap-6">
+          <Link
+            to="/master"
+            className="text-sm font-medium hover:underline underline-offset-4 mt-2"
+          >
+            Entrar no Painel
           </Link>
         </nav>
       </header>
-
-      <main className="flex-1 flex flex-col items-center pt-20 px-4 text-center">
-        <div className="max-w-5xl w-full grid md:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6 text-left">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight">
-              A Plataforma Definitiva para Cartões Private Label
-            </h1>
-            <p className="text-lg text-slate-600">
-              Transforme a gestão de benefícios, fidelize clientes e aumente o faturamento com o
-              nosso sistema co-branded completo. Totalmente configurável e flexível para o seu
-              negócio.
-            </p>
-            <div className="flex flex-wrap gap-4 pt-4">
-              <Link to="/master">
-                <Button
-                  size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                >
-                  Começar Agora
+      <main className="flex-1">
+        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-muted/40">
+          <div className="container px-4 md:px-6 mx-auto">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="space-y-2 max-w-3xl">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                  Sua Plataforma Completa de Cartões
+                </h1>
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                  Ofereça cartões private label e co-branded para seus clientes. Controle limites,
+                  faturas e catálogos em um só lugar.
+                </p>
+              </div>
+              <div className="space-x-4 mt-6">
+                <Button size="lg" asChild>
+                  <Link to="/master">Começar Agora</Link>
                 </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="font-semibold border-slate-300">
-                Fale com um Consultor
-              </Button>
+                <Button variant="outline" size="lg" asChild>
+                  <Link to="/master">Acessar Painel</Link>
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="flex justify-center relative">
-            <div className="absolute inset-0 bg-blue-500 rounded-2xl blur-3xl opacity-20 animate-pulse" />
-            <img
-              src={heroImage}
-              alt="Modelo V Club Card"
-              className="relative rounded-2xl shadow-2xl transform rotate-2 hover:rotate-0 transition duration-500 w-full max-w-md border-4 border-white"
-            />
-          </div>
-        </div>
-      </main>
+        </section>
 
-      <footer className="py-8 mt-12 text-center text-slate-500 text-sm border-t bg-white">
-        &copy; {new Date().getFullYear()} V Club Card. Todos os direitos reservados.
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-background">
+          <div className="container px-4 md:px-6 mx-auto">
+            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-4 bg-primary/10 rounded-full">
+                  <Zap className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold">Rápida Integração</h3>
+                <p className="text-muted-foreground">
+                  Implemente soluções de crédito para seus clientes em tempo recorde com nossa API
+                  nativa.
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-4 bg-primary/10 rounded-full">
+                  <ShieldCheck className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold">Segurança Total</h3>
+                <p className="text-muted-foreground">
+                  Dados criptografados e proteção antifraude para todas as transações da sua base.
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-4 bg-primary/10 rounded-full">
+                  <CheckCircle2 className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold">Gestão Simplificada</h3>
+                <p className="text-muted-foreground">
+                  Painel administrativo completo para controlar BINs, limites e emissão de cartões.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
+        <p className="text-xs text-muted-foreground">
+          © 2026 V Club Card. Todos os direitos reservados.
+        </p>
+        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+          <Link className="text-xs hover:underline underline-offset-4" to="#">
+            Termos de Uso
+          </Link>
+          <Link className="text-xs hover:underline underline-offset-4" to="#">
+            Privacidade
+          </Link>
+        </nav>
       </footer>
     </div>
   )
