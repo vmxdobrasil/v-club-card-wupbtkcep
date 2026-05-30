@@ -39,6 +39,7 @@ onRecordCreate((e) => {
   let splitData = { commission, net, provider, rate }
   let gatewayRef = ''
   let asaasCustomerId = ''
+  let gatewaySuccess = true
 
   if (provider === 'Asaas') {
     const asaasApiKey = $secrets.get('ASAAS_API_KEY') || ''
@@ -56,6 +57,7 @@ onRecordCreate((e) => {
 
     if (!asaasCustomerId) {
       const user = $app.findRecordById('users', holder.get('user_id'))
+      const cpfCnpj = holder.getString('cpf') || '00000000000'
       const res = $http.send({
         url: `${asaasEnv}/customers`,
         method: 'POST',
@@ -66,7 +68,7 @@ onRecordCreate((e) => {
         body: JSON.stringify({
           name: user.getString('name') || `Portador ${holder.id}`,
           email: user.getString('email') || `portador-${holder.id}@vclub.local`,
-          cpfCnpj: '00000000000',
+          cpfCnpj,
         }),
         timeout: 15,
       })
@@ -89,7 +91,7 @@ onRecordCreate((e) => {
     const chargePayload = {
       customer: asaasCustomerId,
       billingType: 'PIX',
-      value: amount,
+      value: Number(amount.toFixed(2)),
       dueDate: new Date().toISOString().split('T')[0],
       description: `Transação V Club Card - Ref: ${record.id}`,
       externalReference: record.id,
@@ -99,7 +101,7 @@ onRecordCreate((e) => {
       chargePayload.split = [
         {
           walletId: asaasWalletId,
-          fixedValue: net,
+          fixedValue: Number(net.toFixed(2)),
         },
       ]
     }
@@ -119,6 +121,7 @@ onRecordCreate((e) => {
       gatewayRef = resCharge.json.id
       splitData.gateway_status = resCharge.json.status
       splitData.payment_url = resCharge.json.invoiceUrl || resCharge.json.bankSlipUrl
+      gatewaySuccess = true
     } else {
       $app
         .logger()
@@ -129,17 +132,20 @@ onRecordCreate((e) => {
           'response',
           resCharge.json,
         )
-      throw new BadRequestError('Falha ao processar pagamento no gateway.', {
-        gateway: new ValidationError(
-          'gateway_error',
-          'O gateway rejeitou a transação. Verifique os dados e o split configurado.',
-        ),
-      })
+      splitData.gateway_error = resCharge.json
+      gatewaySuccess = false
     }
   }
 
   $app.runInTransaction((txApp) => {
     const holder = txApp.findRecordById('card_holders', holderId)
+
+    if (provider === 'Asaas' && !gatewaySuccess) {
+      record.set('split_data', splitData)
+      record.set('status', 'rejected')
+      return // skip limit update if gateway rejected
+    }
+
     const total = holder.getFloat('total_limit')
     const used = holder.getFloat('used_limit')
 
@@ -161,12 +167,13 @@ onRecordCreate((e) => {
     txApp.save(holder)
 
     record.set('split_data', splitData)
+
     if (gatewayRef) {
       record.set('gateway_ref', gatewayRef)
-      record.set('status', 'pending')
-    } else {
-      record.set('status', 'approved')
     }
+
+    // Status immediately moves to approved upon successful limit deduction and gateway record creation
+    record.set('status', 'approved')
   })
 
   e.next()
