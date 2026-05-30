@@ -11,6 +11,18 @@ export const getCompany = async (id: string) => {
   return await pb.collection('companies').getOne(id)
 }
 
+export const getMyCompany = async () => {
+  const user = pb.authStore.record
+  if (!user) throw new Error('Not authenticated')
+
+  if (user.company) {
+    return await pb.collection('companies').getOne(user.company)
+  }
+
+  // Fallback to getting the first company the user has access to via RLS
+  return await pb.collection('companies').getFirstListItem('')
+}
+
 export const createCompany = async (data: Record<string, any>) => {
   const formData = new FormData()
 
