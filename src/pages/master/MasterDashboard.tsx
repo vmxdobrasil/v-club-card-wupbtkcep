@@ -1,60 +1,94 @@
-import { useAuth } from '@/hooks/use-auth'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building2, CreditCard, Users, RefreshCw } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Building2, BookOpen, Users, CreditCard } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
 
 export default function MasterDashboard() {
-  const { user } = useAuth()
+  const [stats, setStats] = useState({
+    companies: 0,
+    catalogs: 0,
+    partners: 0,
+    holders: 0,
+  })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [companies, catalogs, holders] = await Promise.all([
+          pb.collection('companies').getList(1, 1, { filter: "deleted_at = ''" }),
+          pb.collection('catalogs').getList(1, 1, { filter: "deleted_at = ''" }),
+          pb.collection('card_holders').getList(1, 1, { filter: "deleted_at = ''" }),
+        ])
+
+        // Count partners from users where role = partner
+        const partners = await pb.collection('users').getList(1, 1, { filter: "role = 'partner'" })
+
+        setStats({
+          companies: companies.totalItems,
+          catalogs: catalogs.totalItems,
+          partners: partners.totalItems,
+          holders: holders.totalItems,
+        })
+      } catch (err) {
+        console.error('Erro ao buscar estatísticas', err)
+      }
+    }
+    fetchStats()
+  }, [])
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Painel de Controle</h1>
-        <p className="text-muted-foreground mt-2">
-          Bem-vindo de volta, {user?.name || 'Administrador'}. Aqui está o resumo da plataforma.
-        </p>
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-500 mt-1">Visão geral do sistema</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Empresas Ativas</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Empresas Ativas</CardTitle>
+            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+              <Building2 className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Gerencie</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Acesse a aba de empresas para mais detalhes
-            </p>
+            <div className="text-3xl font-bold text-gray-900">{stats.companies}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Portadores de Cartão</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Catálogos</CardTitle>
+            <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+              <BookOpen className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Usuários</div>
-            <p className="text-xs text-muted-foreground mt-1">Acompanhe titulares no sistema</p>
+            <div className="text-3xl font-bold text-gray-900">{stats.catalogs}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transações</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Parceiros</CardTitle>
+            <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Monitoramento</div>
-            <p className="text-xs text-muted-foreground mt-1">Acompanhe o volume financeiro</p>
+            <div className="text-3xl font-bold text-gray-900">{stats.partners}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cartões Emitidos</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Portadores</CardTitle>
+            <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+              <CreditCard className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Plataforma</div>
-            <p className="text-xs text-muted-foreground mt-1">Emissão de cartões co-branded</p>
+            <div className="text-3xl font-bold text-gray-900">{stats.holders}</div>
           </CardContent>
         </Card>
       </div>

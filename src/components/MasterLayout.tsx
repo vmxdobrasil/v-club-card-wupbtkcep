@@ -1,87 +1,120 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import {
+  Sidebar,
+  SidebarProvider,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarHeader,
+  SidebarFooter,
+} from '@/components/ui/sidebar'
+import {
+  LayoutDashboard,
+  Building2,
+  BookOpen,
+  Users,
+  Trash2,
+  LogOut,
+  Package,
+  CreditCard,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { Button } from '@/components/ui/button'
 
 export function MasterLayout() {
   const { signOut } = useAuth()
+  const navigate = useNavigate()
   const location = useLocation()
 
+  const handleSignOut = () => {
+    signOut()
+    navigate('/')
+  }
+
   return (
-    <div className="min-h-screen flex w-full">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0">
-        <div className="p-6 flex items-center justify-center border-b border-slate-800">
-          <img
-            src="/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg"
-            alt="V Club Card"
-            className="h-16 w-auto object-contain rounded"
-            onError={(e) => {
-              e.currentTarget.src = 'https://img.usecurling.com/i?q=vclub&color=blue&shape=fill'
-            }}
-          />
-        </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Link
-            to="/master"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/master' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Dashboard
-          </Link>
-          <Link
-            to="/companies"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/companies' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Companies
-          </Link>
-          <Link
-            to="/bin"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/bin' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            BINs
-          </Link>
-          <Link
-            to="/partners"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/partners' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Partners
-          </Link>
-          <Link
-            to="/products"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/products' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Products
-          </Link>
-          <Link
-            to="/catalogos"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname.startsWith('/catalogos') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Catalogs
-          </Link>
-          <Link
-            to="/usuarios"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/usuarios' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Holders
-          </Link>
-          <Link
-            to="/lixeira"
-            className={`block px-4 py-2.5 rounded transition-colors ${location.pathname === '/lixeira' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-          >
-            Trash
-          </Link>
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
-            onClick={signOut}
-          >
-            Logout
-          </Button>
-        </div>
-      </aside>
-      <main className="flex-1 bg-slate-50 overflow-y-auto w-full">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-gray-50">
+        <Sidebar variant="sidebar">
+          <SidebarHeader className="p-4 border-b">
+            <h2 className="text-lg font-bold text-blue-600">Admin Master</h2>
+          </SidebarHeader>
+          <SidebarContent className="px-2 mt-4 space-y-1">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/master'}>
+                  <Link to="/master">
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/companies'}>
+                  <Link to="/companies">
+                    <Building2 className="w-4 h-4" />
+                    <span>Empresas</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname.startsWith('/catalogos')}>
+                  <Link to="/catalogos">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Catálogos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/products'}>
+                  <Link to="/products">
+                    <Package className="w-4 h-4" />
+                    <span>Produtos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/partners'}>
+                  <Link to="/partners">
+                    <Users className="w-4 h-4" />
+                    <span>Parceiros</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/usuarios'}>
+                  <Link to="/usuarios">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Portadores</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/lixeira' || location.pathname === '/bin'}
+                >
+                  <Link to="/bin">
+                    <Trash2 className="w-4 h-4" />
+                    <span>Lixeira</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-4 border-t">
+            <SidebarMenuButton
+              onClick={handleSignOut}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sair</span>
+            </SidebarMenuButton>
+          </SidebarFooter>
+        </Sidebar>
+        <main className="flex-1 overflow-auto flex flex-col">
+          <Outlet />
+        </main>
+      </div>
+    </SidebarProvider>
   )
 }
