@@ -1,25 +1,22 @@
+/* 404 Page - Displays when a user attempts to access a non-existent route - translate to the language of the user */
 import { useLocation, Link } from 'react-router-dom'
 import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
 
 const NotFound = () => {
   const location = useLocation()
 
   useEffect(() => {
-    console.error('Erro 404: Usuário tentou acessar rota inexistente:', location.pathname)
+    console.error('Erro 404: Usuário tentou acessar uma rota inexistente:', location.pathname)
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
-      <div className="text-center space-y-6">
-        <h1 className="text-6xl font-bold text-gray-900">404</h1>
-        <p className="text-2xl text-gray-600">Ops! Página não encontrada</p>
-        <p className="text-gray-500 max-w-md mx-auto pb-4">
-          A página que você está procurando não existe ou foi movida.
-        </p>
-        <Button asChild>
-          <Link to="/">Voltar para o Início</Link>
-        </Button>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">404</h1>
+        <p className="text-xl text-gray-600 mb-4">Ops! Página não encontrada</p>
+        <Link to="/" className="text-blue-500 hover:text-blue-700 underline">
+          Voltar para o Início
+        </Link>
       </div>
     </div>
   )

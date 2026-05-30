@@ -1,75 +1,63 @@
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Link } from 'react-router-dom'
-import { Building2, Users, Package, ShoppingBag } from 'lucide-react'
+import { Building2, CreditCard, Users, RefreshCw } from 'lucide-react'
 
-const MasterDashboard = () => {
+export default function MasterDashboard() {
   const { user } = useAuth()
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Painel Principal</h1>
-        <p className="text-muted-foreground">
-          Bem-vindo de volta, {user?.name || 'Administrador'}. Aqui está o resumo do seu sistema.
+        <h1 className="text-3xl font-bold tracking-tight">Painel de Controle</h1>
+        <p className="text-muted-foreground mt-2">
+          Bem-vindo de volta, {user?.name || 'Administrador'}. Aqui está o resumo da plataforma.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Empresas</CardTitle>
+            <CardTitle className="text-sm font-medium">Empresas Ativas</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Gerenciar</div>
-            <Link to="/companies" className="text-xs text-blue-600 hover:underline">
-              Ver todas as empresas
-            </Link>
+            <div className="text-2xl font-bold">Gerencie</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Acesse a aba de empresas para mais detalhes
+            </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Parceiros</CardTitle>
+            <CardTitle className="text-sm font-medium">Portadores de Cartão</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Gerenciar</div>
-            <Link to="/partners" className="text-xs text-blue-600 hover:underline">
-              Ver todos os parceiros
-            </Link>
+            <div className="text-2xl font-bold">Usuários</div>
+            <p className="text-xs text-muted-foreground mt-1">Acompanhe titulares no sistema</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Catálogos</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Transações</CardTitle>
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Gerenciar</div>
-            <Link to="/catalogos" className="text-xs text-blue-600 hover:underline">
-              Ver catálogos
-            </Link>
+            <div className="text-2xl font-bold">Monitoramento</div>
+            <p className="text-xs text-muted-foreground mt-1">Acompanhe o volume financeiro</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Produtos</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Cartões Emitidos</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Gerenciar</div>
-            <Link to="/products" className="text-xs text-blue-600 hover:underline">
-              Ver produtos
-            </Link>
+            <div className="text-2xl font-bold">Plataforma</div>
+            <p className="text-xs text-muted-foreground mt-1">Emissão de cartões co-branded</p>
           </CardContent>
         </Card>
       </div>
     </div>
   )
 }
-
-export default MasterDashboard
