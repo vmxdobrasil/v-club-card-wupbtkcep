@@ -81,7 +81,7 @@ onRecordCreate((e) => {
         })
 
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          asaasCustomerId = res.json.id
+          asaasCustomerId = res.json?.id || ''
         } else {
           $app
             .logger()
@@ -90,7 +90,7 @@ onRecordCreate((e) => {
               'status',
               res.statusCode,
               'response',
-              res.json,
+              res.json || res.body,
             )
           gatewaySuccess = false
           splitData.gateway_error = 'Falha ao criar o cliente no gateway de pagamento.'
@@ -128,9 +128,9 @@ onRecordCreate((e) => {
         })
 
         if (resCharge.statusCode >= 200 && resCharge.statusCode < 300) {
-          gatewayRef = resCharge.json.id
-          splitData.gateway_status = resCharge.json.status
-          splitData.payment_url = resCharge.json.invoiceUrl || resCharge.json.bankSlipUrl
+          gatewayRef = resCharge.json?.id || ''
+          splitData.gateway_status = resCharge.json?.status || 'PENDING'
+          splitData.payment_url = resCharge.json?.invoiceUrl || resCharge.json?.bankSlipUrl || ''
           gatewaySuccess = true
         } else {
           $app
@@ -140,9 +140,9 @@ onRecordCreate((e) => {
               'status',
               resCharge.statusCode,
               'response',
-              resCharge.json,
+              resCharge.json || resCharge.body,
             )
-          splitData.gateway_error = resCharge.json
+          splitData.gateway_error = resCharge.json || 'Falha ao criar cobrança'
           gatewaySuccess = false
         }
       }
@@ -153,9 +153,13 @@ onRecordCreate((e) => {
     const holder = txApp.findRecordById('card_holders', holderId)
 
     if (provider === 'Asaas' && !gatewaySuccess) {
-      record.set('split_data', splitData)
-      record.set('status', 'rejected')
-      return // skip limit update if gateway rejected
+      $app
+        .logger()
+        .warn(
+          'Transação aprovada localmente, mas falhou no gateway Asaas.',
+          'error',
+          splitData.gateway_error,
+        )
     }
 
     const total = holder.getFloat('total_limit')

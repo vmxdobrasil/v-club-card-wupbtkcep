@@ -1,86 +1,67 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
-  Building2,
-  Users,
-  Trash2,
-  CreditCard,
-  LogOut,
   LayoutDashboard,
-  Store,
-  Box,
+  Users,
+  CreditCard,
+  Building,
+  Package,
+  BookOpen,
+  Trash2,
+  LogOut,
 } from 'lucide-react'
-
-import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 
 export function MasterLayout() {
-  const { signOut, user } = useAuth()
-  const navigate = useNavigate()
+  const { signOut } = useAuth()
+  const location = useLocation()
 
-  const handleLogout = () => {
-    signOut()
-    navigate('/')
-  }
-
-  const navItems = [
-    { name: 'Dashboard', path: '/master', icon: LayoutDashboard },
-    { name: 'Empresas', path: '/companies', icon: Building2 },
-    { name: 'Parceiros', path: '/partners', icon: Store },
-    { name: 'Catálogos', path: '/catalogos', icon: Box },
-    { name: 'Usuários', path: '/usuarios', icon: Users },
-    { name: 'Lixeira', path: '/lixeira', icon: Trash2 },
+  const links = [
+    { href: '/master', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/companies', label: 'Empresas', icon: Building },
+    { href: '/partners', label: 'Parceiros', icon: Users },
+    { href: '/usuarios', label: 'Portadores', icon: CreditCard },
+    { href: '/products', label: 'Produtos', icon: Package },
+    { href: '/catalogos', label: 'Catálogos', icon: BookOpen },
+    { href: '/lixeira', label: 'Lixeira', icon: Trash2 },
   ]
 
   return (
-    <div className="flex h-screen bg-muted/20">
-      <aside className="w-64 flex-shrink-0 bg-card border-r flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b">
-          <CreditCard className="h-6 w-6 text-primary mr-2" />
-          <span className="font-bold text-lg">V Club Master</span>
+    <div className="flex h-screen bg-gray-50">
+      <aside className="w-64 bg-white border-r flex flex-col shadow-sm">
+        <div className="p-6 border-b">
+          <h1 className="text-xl font-bold text-gray-800">Master Admin</h1>
         </div>
-
-        <div className="flex-1 py-4 overflow-y-auto">
-          <nav className="space-y-1 px-3">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )
-                }
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {links.map((link) => {
+            const Icon = link.icon
+            const isActive =
+              location.pathname === link.href || location.pathname.startsWith(link.href + '/')
+            return (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-700 font-medium'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
               >
-                <item.icon className="h-4 w-4 mr-3" />
-                {item.name}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-
+                <Icon className="w-5 h-5" />
+                {link.label}
+              </Link>
+            )
+          })}
+        </nav>
         <div className="p-4 border-t">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-              {user?.name?.charAt(0) || 'M'}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate">{user?.name || 'Master Admin'}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
+          <Button variant="outline" className="w-full justify-start gap-2" onClick={signOut}>
+            <LogOut className="w-4 h-4" />
             Sair
           </Button>
         </div>
       </aside>
-
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8">
           <Outlet />
         </div>
       </main>

@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Search } from 'lucide-react'
-
-import pb from '@/lib/pocketbase/client'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useState, useEffect } from 'react'
+import { Plus, Search, Trash } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -12,205 +10,352 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useToast } from '@/hooks/use-toast'
+import pb from '@/lib/pocketbase/client'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
 export default function MasterHoldersPage() {
   const [holders, setHolders] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [search, setSearch] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { toast } = useToast()
 
-  const loadHolders = async () => {
+  const [formData, setFormData] = useState({
+    user_id: '',
+    company_id: '',
+    card_number: '',
+    total_limit: 0,
+    used_limit: 0,
+    status: 'active',
+    cpf: '',
+    card_type: 'physical_virtual',
+    credit_source: 'proprietary',
+  })
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    setLoading(true)
     try {
-      const records = await pb.collection('card_holders').getFullList({
-        expand: 'user_id,company_id',
-        sort: '-created',
-      })
-      setHolders(records)
-    } catch (error) {
-      console.error('Failed to load holders', error)
+      const [holdersRes, companiesRes, usersRes] = await Promise.all([
+        pb
+          .collection('card_holders')
+          .getFullList({ expand: 'user_id,company_id', sort: '-created' }),
+        pb.collection('companies').getFullList({ sort: 'name' }),
+        pb.collection('users').getFullList({ sort: 'name' }),
+      ])
+      setHolders(holdersRes)
+      setCompanies(companiesRes)
+      setUsers(usersRes.filter((u) => u.role === 'holder' || !u.role))
+    } catch (err) {
+      toast({ title: 'Erro', description: 'Erro ao carregar dados', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    loadHolders()
-  }, [])
+  const filteredHolders = holders.filter(
+    (h) =>
+      (h.expand?.user_id?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (h.cpf || '').includes(search) ||
+      (h.card_number || '').includes(search),
+  )
 
-  useRealtime('card_holders', () => {
-    loadHolders()
-  })
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (!formData.user_id || !formData.company_id) {
+        toast({
+          title: 'Atenção',
+          description: 'Selecione um usuário e uma empresa',
+          variant: 'destructive',
+        })
+        return
+      }
 
-  const filteredHolders = holders.filter((h) => {
-    const userName = h.expand?.user_id?.name?.toLowerCase() || ''
-    const userEmail = h.expand?.user_id?.email?.toLowerCase() || ''
-    const cpf = h.cpf || ''
-    const s = searchTerm.toLowerCase()
-    return userName.includes(s) || userEmail.includes(s) || cpf.includes(s)
-  })
+      await pb.collection('card_holders').create(formData)
+      toast({ title: 'Sucesso', description: 'Portador criado com sucesso' })
+      setIsModalOpen(false)
+      setFormData({
+        user_id: '',
+        company_id: '',
+        card_number: '',
+        total_limit: 0,
+        used_limit: 0,
+        status: 'active',
+        cpf: '',
+        card_type: 'physical_virtual',
+        credit_source: 'proprietary',
+      })
+      loadData()
+    } catch (err: any) {
+      const errors = extractFieldErrors(err)
+      toast({
+        title: 'Erro ao criar',
+        description: Object.values(errors)[0] || 'Verifique os dados informados',
+        variant: 'destructive',
+      })
+    }
+  }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">
-            Ativo
-          </Badge>
-        )
-      case 'blocked':
-        return (
-          <Badge variant="destructive" className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-            Bloqueado
-          </Badge>
-        )
-      case 'canceled':
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-slate-500/10 text-slate-500 hover:bg-slate-500/20"
-          >
-            Cancelado
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{status}</Badge>
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este portador?')) return
+    try {
+      await pb.collection('card_holders').delete(id)
+      toast({ title: 'Sucesso', description: 'Portador excluído' })
+      loadData()
+    } catch (err) {
+      toast({ title: 'Erro', description: 'Não foi possível excluir', variant: 'destructive' })
     }
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Usuários & Portadores</h2>
-          <p className="text-muted-foreground">
-            Gerenciamento global de portadores de cartão de todas as empresas
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Gerenciar Portadores</h1>
+          <p className="text-gray-500 text-sm mt-1">Gerencie os cartões e limites dos usuários</p>
         </div>
+
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Novo Portador
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Portador</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Usuário</Label>
+                  <Select
+                    value={formData.user_id}
+                    onValueChange={(val) => setFormData({ ...formData, user_id: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name || u.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <Select
+                    value={formData.company_id}
+                    onValueChange={(val) => setFormData({ ...formData, company_id: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>CPF</Label>
+                  <Input
+                    value={formData.cpf}
+                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Número do Cartão</Label>
+                  <Input
+                    value={formData.card_number}
+                    onChange={(e) => setFormData({ ...formData, card_number: e.target.value })}
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Limite Total (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.total_limit}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_limit: parseFloat(e.target.value) || 0 })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(val) => setFormData({ ...formData, status: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="blocked">Bloqueado</SelectItem>
+                      <SelectItem value="canceled">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Cartão</Label>
+                  <Select
+                    value={formData.card_type}
+                    onValueChange={(val) => setFormData({ ...formData, card_type: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="physical_virtual">Físico e Virtual</SelectItem>
+                      <SelectItem value="virtual_only">Apenas Virtual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Fonte de Crédito</Label>
+                  <Select
+                    value={formData.credit_source}
+                    onValueChange={(val) => setFormData({ ...formData, credit_source: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="proprietary">Próprio</SelectItem>
+                      <SelectItem value="asaas">Asaas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="submit">Salvar Portador</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Portadores de Cartão</CardTitle>
-          <CardDescription>
-            Lista de usuários que possuem cartões emitidos na plataforma.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, email ou CPF..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="p-4 border-b flex gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nome, CPF ou cartão..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
+        </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Documento</TableHead>
-                  <TableHead>Limite Total</TableHead>
-                  <TableHead>Limite Disponível</TableHead>
-                  <TableHead>Status</TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Usuário</TableHead>
+              <TableHead>Empresa</TableHead>
+              <TableHead>CPF</TableHead>
+              <TableHead>Limites</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  Carregando...
+                </TableCell>
+              </TableRow>
+            ) : filteredHolders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  Nenhum portador encontrado
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredHolders.map((holder) => (
+                <TableRow key={holder.id}>
+                  <TableCell className="font-medium">
+                    {holder.expand?.user_id?.name || holder.expand?.user_id?.email || 'N/A'}
+                  </TableCell>
+                  <TableCell>{holder.expand?.company_id?.name || 'N/A'}</TableCell>
+                  <TableCell>{holder.cpf || '-'}</TableCell>
+                  <TableCell>
+                    R$ {(holder.used_limit || 0).toFixed(2)} / R${' '}
+                    {(holder.total_limit || 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        holder.status === 'active'
+                          ? 'bg-green-100 text-green-700'
+                          : holder.status === 'blocked'
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {holder.status === 'active'
+                        ? 'Ativo'
+                        : holder.status === 'blocked'
+                          ? 'Bloqueado'
+                          : 'Cancelado'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(holder.id)}>
+                      <Trash className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <Skeleton className="h-10 w-full" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-32" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-20" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredHolders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      Nenhum portador encontrado.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredHolders.map((holder) => {
-                    const user = holder.expand?.user_id
-                    const company = holder.expand?.company_id
-                    const availableLimit = holder.total_limit - holder.used_limit
-
-                    return (
-                      <TableRow key={holder.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage
-                                src={
-                                  user?.avatar
-                                    ? pb.files.getURL(user, user.avatar)
-                                    : `https://img.usecurling.com/ppl/thumbnail?seed=${user?.id}`
-                                }
-                              />
-                              <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-sm">
-                                {user?.name || 'Sem nome'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">{user?.email}</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {company ? (
-                            <span className="font-medium text-sm">{company.name}</span>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">{holder.cpf || '-'}</TableCell>
-                        <TableCell className="text-sm">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          }).format(holder.total_limit || 0)}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          }).format(availableLimit || 0)}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(holder.status)}</TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
