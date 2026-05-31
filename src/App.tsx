@@ -16,6 +16,7 @@ import MasterCatalogsPage from '@/pages/master/MasterCatalogsPage'
 import MasterCatalogDetailsPage from '@/pages/master/MasterCatalogDetailsPage'
 import MasterHoldersPage from '@/pages/master/MasterHoldersPage'
 import MasterLixeiraPage from '@/pages/master/MasterLixeiraPage'
+import MasterSecretsPage from '@/pages/master/MasterSecretsPage'
 import CompanyDashboard from '@/pages/company/CompanyDashboard'
 import CompanyCatalogsPage from '@/pages/company/CompanyCatalogsPage'
 import CompanyCatalogDetailsPage from '@/pages/company/CompanyCatalogDetailsPage'
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/catalogos/:id" element={<MasterCatalogDetailsPage />} />
             <Route path="/usuarios" element={<MasterHoldersPage />} />
             <Route path="/lixeira" element={<MasterLixeiraPage />} />
+            <Route path="/master/secrets" element={<MasterSecretsPage />} />
             <Route path="/master" element={<MasterDashboard />} />
           </Route>
 

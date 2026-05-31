@@ -42,11 +42,25 @@ onRecordCreate((e) => {
   let gatewaySuccess = true
 
   if (provider === 'Asaas') {
-    const asaasApiKey = $secrets.get('ASAAS_API_KEY') || ''
+    let asaasApiKey = $secrets.get('ASAAS_API_KEY') || ''
+    let asaasEnvStr = $secrets.get('ASAAS_ENV') || 'sandbox'
+
+    try {
+      const apiKeyRecord = $app.findFirstRecordByData('platform_settings', 'key', 'ASAAS_API_KEY')
+      if (apiKeyRecord && apiKeyRecord.getString('value')) {
+        asaasApiKey = apiKeyRecord.getString('value')
+      }
+    } catch (e) {}
+
+    try {
+      const envRecord = $app.findFirstRecordByData('platform_settings', 'key', 'ASAAS_ENV')
+      if (envRecord && envRecord.getString('value')) {
+        asaasEnvStr = envRecord.getString('value')
+      }
+    } catch (e) {}
+
     const asaasEnv =
-      $secrets.get('ASAAS_ENV') === 'production'
-        ? 'https://api.asaas.com/v3'
-        : 'https://sandbox.asaas.com/api/v3'
+      asaasEnvStr === 'production' ? 'https://api.asaas.com/v3' : 'https://sandbox.asaas.com/api/v3'
 
     const holder = $app.findRecordById('card_holders', holderId)
     asaasCustomerId = holder.getString('asaas_customer_id')
