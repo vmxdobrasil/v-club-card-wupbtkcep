@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, Trash2, ShieldKeyhole, KeySquare } from 'lucide-react'
+import { Plus, Trash2, Shield, KeySquare } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -105,7 +105,7 @@ export default function MasterSecretsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <ShieldKeyhole className="w-6 h-6 text-indigo-600" /> Cofre de Segredos
+            <Shield className="w-6 h-6 text-indigo-600" /> Cofre de Segredos
           </h2>
           <p className="text-slate-500 mt-1">
             Gerencie chaves de API, webhooks e integrações externas (ex: ASAAS_API_KEY).
