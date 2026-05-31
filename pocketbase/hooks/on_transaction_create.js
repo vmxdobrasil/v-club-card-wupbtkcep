@@ -48,92 +48,104 @@ onRecordCreate((e) => {
         ? 'https://api.asaas.com/v3'
         : 'https://sandbox.asaas.com/api/v3'
 
-    if (!asaasApiKey) {
-      throw new BadRequestError('API Key do Asaas não configurada.')
-    }
-
     const holder = $app.findRecordById('card_holders', holderId)
     asaasCustomerId = holder.getString('asaas_customer_id')
 
-    if (!asaasCustomerId) {
-      const user = $app.findRecordById('users', holder.get('user_id'))
-      const cpfCnpj = holder.getString('cpf') || '00000000000'
-      const res = $http.send({
-        url: `${asaasEnv}/customers`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          access_token: asaasApiKey,
-        },
-        body: JSON.stringify({
-          name: user.getString('name') || `Portador ${holder.id}`,
-          email: user.getString('email') || `portador-${holder.id}@vclub.local`,
-          cpfCnpj,
-        }),
-        timeout: 15,
-      })
-
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        asaasCustomerId = res.json.id
-      } else {
-        $app
-          .logger()
-          .error('Erro na criação do cliente Asaas', 'status', res.statusCode, 'response', res.json)
-        throw new BadRequestError('Falha ao criar o cliente no gateway de pagamento.', {
-          gateway: new ValidationError(
-            'gateway_error',
-            'Asaas rejeitou a criação do cliente. Verifique os dados.',
-          ),
-        })
-      }
-    }
-
-    const chargePayload = {
-      customer: asaasCustomerId,
-      billingType: 'PIX',
-      value: Number(amount.toFixed(2)),
-      dueDate: new Date().toISOString().split('T')[0],
-      description: `Transação V Club Card - Ref: ${record.id}`,
-      externalReference: record.id,
-    }
-
-    if (asaasWalletId) {
-      chargePayload.split = [
-        {
-          walletId: asaasWalletId,
-          fixedValue: Number(net.toFixed(2)),
-        },
-      ]
-    }
-
-    const resCharge = $http.send({
-      url: `${asaasEnv}/payments`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        access_token: asaasApiKey,
-      },
-      body: JSON.stringify(chargePayload),
-      timeout: 15,
-    })
-
-    if (resCharge.statusCode >= 200 && resCharge.statusCode < 300) {
-      gatewayRef = resCharge.json.id
-      splitData.gateway_status = resCharge.json.status
-      splitData.payment_url = resCharge.json.invoiceUrl || resCharge.json.bankSlipUrl
-      gatewaySuccess = true
-    } else {
+    if (!asaasApiKey) {
       $app
         .logger()
         .error(
-          'Erro na criação da cobrança Asaas',
-          'status',
-          resCharge.statusCode,
-          'response',
-          resCharge.json,
+          'API Key do Asaas não configurada. Prosseguindo sem integração com gateway.',
+          'provider',
+          'Asaas',
         )
-      splitData.gateway_error = resCharge.json
       gatewaySuccess = false
+      splitData.gateway_error = 'API Key do Asaas não configurada.'
+    } else {
+      if (!asaasCustomerId) {
+        const user = $app.findRecordById('users', holder.get('user_id'))
+        const cpfCnpj = holder.getString('cpf') || '00000000000'
+        const res = $http.send({
+          url: `${asaasEnv}/customers`,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            access_token: asaasApiKey,
+          },
+          body: JSON.stringify({
+            name: user.getString('name') || `Portador ${holder.id}`,
+            email: user.getString('email') || `portador-${holder.id}@vclub.local`,
+            cpfCnpj,
+          }),
+          timeout: 15,
+        })
+
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          asaasCustomerId = res.json.id
+        } else {
+          $app
+            .logger()
+            .error(
+              'Erro na criação do cliente Asaas',
+              'status',
+              res.statusCode,
+              'response',
+              res.json,
+            )
+          gatewaySuccess = false
+          splitData.gateway_error = 'Falha ao criar o cliente no gateway de pagamento.'
+        }
+      }
+
+      if (gatewaySuccess) {
+        const chargePayload = {
+          customer: asaasCustomerId,
+          billingType: 'PIX',
+          value: Number(amount.toFixed(2)),
+          dueDate: new Date().toISOString().split('T')[0],
+          description: `Transação V Club Card - Ref: ${record.id}`,
+          externalReference: record.id,
+        }
+
+        if (asaasWalletId) {
+          chargePayload.split = [
+            {
+              walletId: asaasWalletId,
+              fixedValue: Number(net.toFixed(2)),
+            },
+          ]
+        }
+
+        const resCharge = $http.send({
+          url: `${asaasEnv}/payments`,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            access_token: asaasApiKey,
+          },
+          body: JSON.stringify(chargePayload),
+          timeout: 15,
+        })
+
+        if (resCharge.statusCode >= 200 && resCharge.statusCode < 300) {
+          gatewayRef = resCharge.json.id
+          splitData.gateway_status = resCharge.json.status
+          splitData.payment_url = resCharge.json.invoiceUrl || resCharge.json.bankSlipUrl
+          gatewaySuccess = true
+        } else {
+          $app
+            .logger()
+            .error(
+              'Erro na criação da cobrança Asaas',
+              'status',
+              resCharge.statusCode,
+              'response',
+              resCharge.json,
+            )
+          splitData.gateway_error = resCharge.json
+          gatewaySuccess = false
+        }
+      }
     }
   }
 
@@ -172,7 +184,6 @@ onRecordCreate((e) => {
       record.set('gateway_ref', gatewayRef)
     }
 
-    // Status immediately moves to approved upon successful limit deduction and gateway record creation
     record.set('status', 'approved')
   })
 
