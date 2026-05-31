@@ -1,105 +1,99 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  SidebarProvider,
+  LayoutDashboard,
+  Building2,
+  Users,
+  CreditCard,
+  ShoppingBag,
+  Settings,
+  LogOut,
+  Trash2,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/use-auth'
+import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarProvider,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarHeader,
-  SidebarFooter,
+  SidebarTrigger,
 } from '@/components/ui/sidebar'
-import {
-  Building2,
-  Users,
-  ShoppingBag,
-  LayoutGrid,
-  Trash2,
-  ShieldAlert,
-  LogOut,
-} from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
+
+const NAV_ITEMS = [
+  { title: 'Dashboard', href: '/master', icon: LayoutDashboard },
+  { title: 'Empresas', href: '/companies', icon: Building2 },
+  { title: 'Parceiros', href: '/partners', icon: Users },
+  { title: 'Produtos', href: '/products', icon: ShoppingBag },
+  { title: 'Catálogos', href: '/catalogos', icon: CreditCard },
+  { title: 'Portadores', href: '/usuarios', icon: Users },
+  { title: 'Lixeira', href: '/lixeira', icon: Trash2 },
+  { title: 'Secrets', href: '/master/secrets', icon: Settings },
+]
 
 export function MasterLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { signOut } = useAuth()
+
+  const handleSignOut = () => {
+    signOut()
+    navigate('/')
+  }
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen overflow-hidden w-full bg-slate-50">
+      <div className="flex min-h-screen w-full bg-muted/20 relative">
         <Sidebar>
-          <SidebarHeader className="p-4 font-bold text-lg border-b">V Club Master</SidebarHeader>
+          <SidebarHeader className="border-b px-4 py-4">
+            <div className="flex items-center gap-2 font-semibold">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                V
+              </div>
+              V Club Master
+            </div>
+          </SidebarHeader>
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/master'}>
-                      <Link to="/master">
-                        <LayoutGrid className="w-4 h-4 mr-2" /> Dashboard
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/companies'}>
-                      <Link to="/companies">
-                        <Building2 className="w-4 h-4 mr-2" /> Empresas
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/usuarios'}>
-                      <Link to="/usuarios">
-                        <Users className="w-4 h-4 mr-2" /> Portadores
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/products'}>
-                      <Link to="/products">
-                        <ShoppingBag className="w-4 h-4 mr-2" /> Produtos
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/catalogos'}>
-                      <Link to="/catalogos">
-                        <LayoutGrid className="w-4 h-4 mr-2" /> Catálogos
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/master/secrets'}>
-                      <Link to="/master/secrets">
-                        <ShieldAlert className="w-4 h-4 mr-2" /> Configurações
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === '/lixeira'}>
-                      <Link to="/lixeira">
-                        <Trash2 className="w-4 h-4 mr-2" /> Lixeira
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={signOut} className="text-red-500 hover:text-red-600">
-                  <LogOut className="w-4 h-4 mr-2" /> Sair
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+            <SidebarMenu className="px-2 py-4 gap-1">
+              {NAV_ITEMS.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                    tooltip={item.title}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="border-t p-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Button>
           </SidebarFooter>
         </Sidebar>
-        <main className="flex-1 overflow-y-auto p-8 relative">
-          <Outlet />
+
+        <main className="flex-1 flex flex-col w-full relative z-0">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
+            <SidebarTrigger />
+            <div className="flex-1" />
+          </header>
+          <div className="flex-1 p-4 sm:p-6 overflow-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </SidebarProvider>

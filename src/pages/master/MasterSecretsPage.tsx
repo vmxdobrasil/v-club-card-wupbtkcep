@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useToast } from '@/hooks/use-toast'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { z } from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Plus, Trash2, KeyRound } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { useRealtime } from '@/hooks/use-realtime'
 import {
   Dialog,
   DialogContent,
@@ -11,170 +13,199 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import pb from '@/lib/pocketbase/client'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { useToast } from '@/hooks/use-toast'
+
+const secretSchema = z.object({
+  key: z
+    .string()
+    .regex(
+      /^[A-Z][A-Z0-9_]*$/,
+      'Secret key must be uppercase alphanumeric with underscores and start with a letter (e.g. MY_SECRET)',
+    ),
+  value: z.string().min(1, 'Value is required'),
+})
+
+type SecretFormValues = z.infer<typeof secretSchema>
 
 export default function MasterSecretsPage() {
-  const [apiKey, setApiKey] = useState('')
-  const [asaasEnv, setAsaasEnv] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [testHolderId, setTestHolderId] = useState('')
-  const [testCompanyId, setTestCompanyId] = useState('')
-  const [testAmount, setTestAmount] = useState('10.00')
-  const [isTestOpen, setIsTestOpen] = useState(false)
+  const [secrets, setSecrets] = useState<any[]>([])
+  const [open, setOpen] = useState(false)
   const { toast } = useToast()
 
+  const form = useForm<SecretFormValues>({
+    resolver: zodResolver(secretSchema),
+    defaultValues: {
+      key: '',
+      value: '',
+    },
+  })
+
+  const loadSecrets = async () => {
+    try {
+      const records = await pb.collection('platform_settings').getFullList({
+        sort: 'key',
+      })
+      setSecrets(records)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   useEffect(() => {
-    loadSettings()
+    loadSecrets()
   }, [])
 
-  const loadSettings = async () => {
-    try {
-      const records = await pb.collection('platform_settings').getFullList()
-      const keyRecord = records.find((r) => r.key === 'ASAAS_API_KEY')
-      const envRecord = records.find((r) => r.key === 'ASAAS_ENV')
+  useRealtime('platform_settings', () => {
+    loadSecrets()
+  })
 
-      if (keyRecord) setApiKey(keyRecord.value)
-      if (envRecord) setAsaasEnv(envRecord.value)
-    } catch (e) {
-      console.error(e)
+  const onSubmit = async (data: SecretFormValues) => {
+    try {
+      await pb.collection('platform_settings').create(data)
+      setOpen(false)
+      form.reset()
+      toast({ title: 'Secret created successfully' })
+    } catch (err: any) {
+      const fieldErrors = extractFieldErrors(err)
+      if (fieldErrors.key) {
+        form.setError('key', { message: fieldErrors.key })
+      } else {
+        toast({ title: 'Error creating secret', variant: 'destructive' })
+      }
     }
   }
 
-  const handleSave = async () => {
-    setLoading(true)
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this secret?')) return
     try {
-      const records = await pb.collection('platform_settings').getFullList()
-      const saveSetting = async (key: string, value: string) => {
-        const record = records.find((r) => r.key === key)
-        if (record) {
-          await pb.collection('platform_settings').update(record.id, { value })
-        } else {
-          await pb.collection('platform_settings').create({ key, value })
-        }
-      }
-
-      await saveSetting('ASAAS_API_KEY', apiKey)
-      await saveSetting('ASAAS_ENV', asaasEnv || 'sandbox')
-
-      toast({
-        title: 'Configurações salvas',
-        description: 'As credenciais foram atualizadas com sucesso.',
-      })
-    } catch (error: any) {
-      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleTestTransaction = async () => {
-    try {
-      if (!testHolderId || !testCompanyId || !testAmount) {
-        toast({ title: 'Preencha todos os campos', variant: 'destructive' })
-        return
-      }
-
-      const record = await pb.collection('transactions').create({
-        holder_id: testHolderId,
-        company_id: testCompanyId,
-        amount: parseFloat(testAmount),
-        type: 'credit', // credit evaluates Asaas logic in hook
-        status: 'pending',
-      })
-
-      toast({
-        title: 'Transação Teste Criada',
-        description: `ID: ${record.id} - Ref Asaas: ${record.gateway_ref || 'Pendente'}`,
-      })
-      setIsTestOpen(false)
-    } catch (error: any) {
-      toast({ title: 'Erro na Transação', description: error.message, variant: 'destructive' })
+      await pb.collection('platform_settings').delete(id)
+      toast({ title: 'Secret deleted successfully' })
+    } catch (err) {
+      toast({ title: 'Error deleting secret', variant: 'destructive' })
     }
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold">Configurações do Sistema</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Platform Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage system secrets and environment variables.
+          </p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Secret
+            </Button>
+          </DialogTrigger>
+          <DialogContent aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle>Add New Secret</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Key</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. ASAAS_API_KEY" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Value</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Enter secret value..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end pt-4">
+                  <Button type="submit">Save Secret</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Integração Asaas</CardTitle>
-          <CardDescription>
-            Configure as chaves de API para emissão e cobrança via gateway Asaas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Ambiente (sandbox / production)</Label>
-            <Input
-              value={asaasEnv}
-              onChange={(e) => setAsaasEnv(e.target.value)}
-              placeholder="sandbox"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>API Key (Asaas)</Label>
-            <Input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="$aact_..."
-            />
-          </div>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar Configurações'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ferramentas de Teste</CardTitle>
-          <CardDescription>Valide a integração simulando uma transação via Asaas.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Dialog open={isTestOpen} onOpenChange={setIsTestOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Testar Transação no Gateway</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Simular Transação Asaas</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>ID do Portador</Label>
-                  <Input
-                    value={testHolderId}
-                    onChange={(e) => setTestHolderId(e.target.value)}
-                    placeholder="ex: 1z2x3c4v..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>ID da Empresa</Label>
-                  <Input
-                    value={testCompanyId}
-                    onChange={(e) => setTestCompanyId(e.target.value)}
-                    placeholder="ex: 9q8w7e6r..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
-                  <Input
-                    value={testAmount}
-                    onChange={(e) => setTestAmount(e.target.value)}
-                    type="number"
-                    step="0.01"
-                  />
-                </div>
-                <Button onClick={handleTestTransaction} className="w-full">
-                  Executar Teste
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
+      <div className="border rounded-md bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[300px]">Key</TableHead>
+              <TableHead>Value</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {secrets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                  No secrets configured.
+                </TableCell>
+              </TableRow>
+            ) : (
+              secrets.map((secret) => (
+                <TableRow key={secret.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      <KeyRound className="w-4 h-4 text-muted-foreground" />
+                      <span>{secret.key}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono bg-muted px-2 py-1 rounded text-sm text-muted-foreground">
+                      ••••••••••••••••
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(secret.id)}
+                      className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
