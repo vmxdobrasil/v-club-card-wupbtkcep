@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Key, ShieldAlert } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import pb from '@/lib/pocketbase/client'
-import { useToast } from '@/hooks/use-toast'
-import { useRealtime } from '@/hooks/use-realtime'
-import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { Plus, Trash2, ShieldKeyhole, KeySquare } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,9 +21,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -36,35 +30,41 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useToast } from '@/hooks/use-toast'
+import {
+  getSettings,
+  createSetting,
+  deleteSetting,
+  type PlatformSetting,
+} from '@/services/platform_settings'
 
 const secretSchema = z.object({
   key: z
     .string()
+    .min(1, 'O nome da chave é obrigatório')
     .regex(
-      /^[A-Z][A-Z0-9_]*$/,
-      'Secret key must be uppercase alphanumeric with underscores and start with a letter (e.g. ASAAS_API_KEY)',
+      /^[A-Z_]+$/,
+      'Apenas letras maiúsculas e underscores são permitidos (ex: ASAAS_API_KEY)',
     ),
-  value: z.string().min(1, 'Value is required'),
+  value: z.string().min(1, 'O valor é obrigatório'),
 })
 
-type SecretFormValues = z.infer<typeof secretSchema>
-
 export default function MasterSecretsPage() {
-  const [secrets, setSecrets] = useState<any[]>([])
-  const [isOpen, setIsOpen] = useState(false)
+  const [secrets, setSecrets] = useState<PlatformSetting[]>([])
+  const [open, setOpen] = useState(false)
   const { toast } = useToast()
 
-  const form = useForm<SecretFormValues>({
+  const form = useForm<z.infer<typeof secretSchema>>({
     resolver: zodResolver(secretSchema),
     defaultValues: { key: '', value: '' },
   })
 
   const loadSecrets = async () => {
     try {
-      const records = await pb.collection('platform_settings').getFullList({ sort: '-created' })
-      setSecrets(records)
-    } catch (error) {
-      console.error('Failed to load secrets:', error)
+      const data = await getSettings()
+      setSecrets(data)
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -72,91 +72,77 @@ export default function MasterSecretsPage() {
     loadSecrets()
   }, [])
 
-  useRealtime('platform_settings', () => {
-    loadSecrets()
-  })
-
-  const onSubmit = async (data: SecretFormValues) => {
+  const onSubmit = async (values: z.infer<typeof secretSchema>) => {
     try {
-      const existing = secrets.find((s) => s.key === data.key)
-      if (existing) {
-        await pb.collection('platform_settings').update(existing.id, { value: data.value })
-        toast({ title: 'Success', description: 'Secret updated successfully.' })
-      } else {
-        await pb.collection('platform_settings').create(data)
-        toast({ title: 'Success', description: 'Secret created successfully.' })
-      }
-      setIsOpen(false)
+      await createSetting(values)
+      toast({ title: 'Sucesso', description: 'Secret salvo no cofre com sucesso.' })
+      setOpen(false)
       form.reset()
-    } catch (error) {
-      const fieldErrors = extractFieldErrors(error)
-      let hasErrors = false
-      Object.keys(fieldErrors).forEach((field) => {
-        if (field === 'key' || field === 'value') {
-          form.setError(field as keyof SecretFormValues, {
-            type: 'manual',
-            message: fieldErrors[field],
-          })
-          hasErrors = true
-        }
-      })
-      if (!hasErrors) {
-        toast({ title: 'Error', description: 'Failed to save secret.', variant: 'destructive' })
-      }
+      loadSecrets()
+    } catch (err: any) {
+      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' })
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this secret?')) return
+    if (
+      !confirm(
+        'Atenção: A remoção desta chave pode quebrar integrações em andamento (ex: ASAAS). Deseja continuar?',
+      )
+    )
+      return
     try {
-      await pb.collection('platform_settings').delete(id)
-      toast({ title: 'Success', description: 'Secret deleted successfully.' })
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete secret.', variant: 'destructive' })
+      await deleteSetting(id)
+      toast({ title: 'Removido', description: 'Secret removido do cofre com sucesso.' })
+      loadSecrets()
+    } catch (err: any) {
+      toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' })
     }
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 bg-white p-8 rounded-xl shadow-sm border border-slate-200 relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Platform Secrets</h2>
-          <p className="text-muted-foreground mt-1">
-            Manage API keys and integration settings for the platform.
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <ShieldKeyhole className="w-6 h-6 text-indigo-600" /> Cofre de Segredos
+          </h2>
+          <p className="text-slate-500 mt-1">
+            Gerencie chaves de API, webhooks e integrações externas (ex: ASAAS_API_KEY).
           </p>
         </div>
+
         <Dialog
-          open={isOpen}
-          onOpenChange={(open) => {
-            setIsOpen(open)
-            if (!open) form.reset()
+          open={open}
+          onOpenChange={(val) => {
+            setOpen(val)
+            if (!val) form.reset()
           }}
         >
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Secret
+            <Button className="relative z-20 shadow-sm cursor-pointer">
+              <Plus className="mr-2 h-4 w-4" /> Adicionar Secret
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add Platform Secret</DialogTitle>
+              <DialogTitle>Novo Secret</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <FormField
                   control={form.control}
                   name="key"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Key</FormLabel>
+                      <FormLabel>Nome da Chave</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. ASAAS_API_KEY" {...field} />
+                        <Input
+                          placeholder="ASAAS_API_KEY"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                        />
                       </FormControl>
-                      <FormDescription>
-                        Must start with a letter and contain only uppercase letters, numbers, and
-                        underscores.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -166,19 +152,22 @@ export default function MasterSecretsPage() {
                   name="value"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Value</FormLabel>
+                      <FormLabel>Valor do Secret</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Enter secret value..." {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Insira o token ou chave secreta..."
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <DialogFooter className="pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-                    Cancel
+                  <Button type="submit" className="w-full">
+                    Salvar no Cofre
                   </Button>
-                  <Button type="submit">Save Secret</Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -186,59 +175,51 @@ export default function MasterSecretsPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-destructive" />
-            Sensitive Integration Keys
-          </CardTitle>
-          <CardDescription>
-            These secrets are securely stored and utilized by edge functions and webhooks (such as
-            the Asaas Webhook).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
+      <div className="border border-slate-200 rounded-lg overflow-hidden mt-6">
+        <Table>
+          <TableHeader className="bg-slate-50">
+            <TableRow>
+              <TableHead className="font-semibold">Chave de Integração</TableHead>
+              <TableHead className="font-semibold">Adicionado em</TableHead>
+              <TableHead className="w-[100px] text-right font-semibold">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {secrets.length === 0 ? (
               <TableRow>
-                <TableHead className="w-[300px]">Secret Key</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead className="w-[200px]">Last Updated</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableCell colSpan={3} className="text-center h-32 text-slate-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <KeySquare className="w-8 h-8 text-slate-300" />
+                    <p>O cofre está vazio. Nenhum secret configurado no momento.</p>
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {secrets.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground h-32">
-                    <Key className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    No secrets found. Add an API key to configure integrations.
-                  </TableCell>
-                </TableRow>
-              )}
-              {secrets.map((secret) => (
+            ) : (
+              secrets.map((secret) => (
                 <TableRow key={secret.id}>
-                  <TableCell className="font-mono font-medium">{secret.key}</TableCell>
-                  <TableCell className="text-muted-foreground">••••••••••••••••••••</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(secret.updated).toLocaleString()}
+                  <TableCell className="font-mono font-medium text-slate-700">
+                    {secret.key}
+                  </TableCell>
+                  <TableCell className="text-slate-500">
+                    {new Date(secret.created).toLocaleString('pt-BR')}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(secret.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Remover Secret"
+                      className="hover:text-red-600 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
