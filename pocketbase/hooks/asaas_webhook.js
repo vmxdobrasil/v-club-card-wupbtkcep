@@ -1,11 +1,5 @@
 routerAdd('POST', '/backend/v1/asaas/webhook', (e) => {
-  let asaasApiKey = $secrets.get('ASAAS_API_KEY') || ''
-  try {
-    const apiKeyRecord = $app.findFirstRecordByData('platform_settings', 'key', 'ASAAS_API_KEY')
-    if (apiKeyRecord && apiKeyRecord.getString('value')) {
-      asaasApiKey = apiKeyRecord.getString('value')
-    }
-  } catch (err) {}
+  const asaasApiKey = $secrets.get('ASAAS_API_KEY') || ''
 
   const reqToken = e.request.header.get('asaas-access-token')
   if (asaasApiKey && reqToken && reqToken !== asaasApiKey) {

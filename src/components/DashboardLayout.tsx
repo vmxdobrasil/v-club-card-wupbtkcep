@@ -1,92 +1,100 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarProvider,
-  SidebarTrigger,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset,
 } from '@/components/ui/sidebar'
-import { LayoutDashboard, LogOut, Library, Box, Bot } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Bot, Package, LogOut, Building } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
-export function DashboardLayout({ role }: { role: 'company' | 'holder' | 'partner' }) {
-  const { signOut, user } = useAuth()
-  const location = useLocation()
+interface DashboardLayoutProps {
+  role: 'company' | 'holder' | 'partner'
+}
 
-  const navItems = {
+export function DashboardLayout({ role }: DashboardLayoutProps) {
+  const { pathname } = useLocation()
+  const { signOut } = useAuth()
+
+  const menus = {
     company: [
-      { title: 'Dashboard', path: '/company', icon: LayoutDashboard },
-      { title: 'Catálogos', path: '/company/catalogos', icon: Library },
-      { title: 'AI Agent', path: '/company/ai-agent', icon: Bot },
+      { title: 'Dashboard', url: '/company', icon: LayoutDashboard },
+      { title: 'Catálogos', url: '/company/catalogos', icon: BookOpen },
+      { title: 'AI Agent', url: '/company/ai-agent', icon: Bot },
     ],
-    holder: [{ title: 'Dashboard', path: '/holder', icon: LayoutDashboard }],
     partner: [
-      { title: 'Dashboard', path: '/partner', icon: LayoutDashboard },
-      { title: 'Produtos', path: '/partner/products', icon: Box },
-      { title: 'Catálogos', path: '/partner/catalogos', icon: Library },
+      { title: 'Dashboard', url: '/partner', icon: LayoutDashboard },
+      { title: 'Produtos', url: '/partner/products', icon: Package },
+      { title: 'Catálogos', url: '/partner/catalogos', icon: BookOpen },
     ],
+    holder: [{ title: 'Dashboard', url: '/holder', icon: LayoutDashboard }],
   }
 
-  const items = navItems[role] || []
+  const roleMenu = menus[role] || []
+
+  const roleTitles = {
+    company: 'Painel da Empresa',
+    partner: 'Painel do Parceiro',
+    holder: 'Meu Cartão',
+  }
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-slate-50/50">
-        <Sidebar>
-          <SidebarHeader className="p-4 border-b">
-            <h2 className="text-xl font-bold">V Club Card</h2>
-            <p className="text-xs text-muted-foreground capitalize">{role} Panel</p>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {items.map((item) => (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton asChild isActive={location.pathname === item.path}>
-                        <Link to={item.path}>
-                          <item.icon className="w-4 h-4 mr-2" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t">
-            {user?.email && (
-              <div className="mb-4 px-2 text-sm text-muted-foreground truncate">{user.email}</div>
-            )}
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={signOut} className="text-red-500 hover:text-red-600">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  <span>Sair</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 border-b bg-white flex items-center px-4 sticky top-0 z-10">
-            <SidebarTrigger />
-          </header>
-          <main className="flex-1 p-6 overflow-y-auto">
-            <Outlet />
-          </main>
+      <Sidebar>
+        <SidebarHeader className="border-b px-4 py-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Building className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-lg font-bold">{roleTitles[role]}</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Menu</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {roleMenu.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <div className="mt-auto p-4 border-t">
+          <SidebarMenuButton
+            onClick={signOut}
+            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </SidebarMenuButton>
         </div>
-      </div>
+      </Sidebar>
+      <SidebarInset className="flex flex-col flex-1 min-w-0 bg-muted/30">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-6">
+          <SidebarTrigger />
+          <div className="flex-1" />
+        </header>
+        <main className="flex-1 p-6 overflow-auto">
+          <Outlet />
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   )
 }
