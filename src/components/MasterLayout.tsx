@@ -87,8 +87,7 @@ export function MasterLayout() {
           <header className="h-14 border-b bg-white flex items-center px-4 sticky top-0 z-10">
             <SidebarTrigger />
           </header>
-          {/* Main Content Area - ensures standard pointer events and proper z-index context */}
-          <main className="flex-1 p-6 overflow-auto relative z-0">
+          <main className="flex-1 p-6 overflow-y-auto">
             <Outlet />
           </main>
         </div>
