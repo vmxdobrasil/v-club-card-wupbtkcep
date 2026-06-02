@@ -1,56 +1,145 @@
-import { useAuth } from '@/hooks/use-auth'
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg'
+import { useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Wallet, AlertCircle } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
+import { useAuth } from '@/hooks/use-auth'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function HolderDashboard() {
   const { user } = useAuth()
+  const [holder, setHolder] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+
+  const loadData = async () => {
+    if (!user) return
+    try {
+      const record = await pb.collection('card_holders').getFirstListItem(`user_id="${user.id}"`)
+      setHolder(record)
+
+      const txs = await pb.collection('transactions').getList(1, 20, {
+        filter: `holder_id="${record.id}"`,
+        sort: '-created',
+      })
+      setTransactions(txs.items)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [user])
+
+  useRealtime('card_holders', loadData)
+  useRealtime('transactions', loadData)
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome, {user?.name || 'Cardholder'}!
-        </h1>
-        <p className="text-muted-foreground">Manage your V CLUB Card and view your limits.</p>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Meu Cartão</h1>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Virtual Card Display */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-1 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-6 shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500" />
-          <img
-            src={cardImage}
-            alt="V Club Virtual Card"
-            className="w-full max-w-[320px] h-auto object-contain rounded-xl shadow-2xl transform transition-transform duration-500 group-hover:scale-[1.03]"
-          />
+      {holder && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="bg-primary text-primary-foreground">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium opacity-80">Limite Disponível</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                R$ {Math.max(0, holder.total_limit - holder.used_limit).toFixed(2)}
+              </div>
+              <div className="text-sm opacity-80 mt-2">
+                Limite Total: R$ {holder.total_limit.toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Status do Cartão
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge
+                variant={holder.status === 'active' ? 'default' : 'destructive'}
+                className="mt-2 text-lg px-4 py-1 uppercase"
+              >
+                {holder.status}
+              </Badge>
+              <div className="text-sm text-muted-foreground mt-4 font-mono">
+                **** **** **** {holder.card_number?.slice(-4) || 'XXXX'}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Available Limit</CardTitle>
-            <Wallet className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">R$ 2.450,00</div>
-            <p className="text-xs text-muted-foreground mt-1">Total limit: R$ 5.000,00</p>
-            <div className="mt-4 h-2 bg-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-primary w-[51%]" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Card Status</CardTitle>
-            <AlertCircle className="w-4 h-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">Active</div>
-            <p className="text-xs text-muted-foreground mt-1">Your card is ready to use</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Transações</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      Nenhuma transação ainda
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(tx.created).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="capitalize whitespace-nowrap">
+                        {tx.type === 'debit' ? 'Débito' : 'Crédito'}
+                      </TableCell>
+                      <TableCell
+                        className={`whitespace-nowrap font-medium ${tx.type === 'debit' ? 'text-destructive' : 'text-success'}`}
+                      >
+                        {tx.type === 'debit' ? '-' : '+'} R$ {tx.amount.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            tx.status === 'approved'
+                              ? 'default'
+                              : tx.status === 'rejected'
+                                ? 'destructive'
+                                : 'outline'
+                          }
+                        >
+                          {tx.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   )
 }

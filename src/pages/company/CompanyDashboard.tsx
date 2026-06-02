@@ -1,65 +1,137 @@
-import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-62b47.jpeg'
+import { useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, ShoppingCart, DollarSign } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
+import { useAuth } from '@/hooks/use-auth'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function CompanyDashboard() {
+  const { user } = useAuth()
+  const [stats, setStats] = useState({ holders: 0, transactions: 0 })
+  const [recentTx, setRecentTx] = useState<any[]>([])
+
+  const loadData = async () => {
+    if (!user) return
+    try {
+      const company = await pb.collection('companies').getFirstListItem(`owner_id="${user.id}"`)
+      const [holders, txs] = await Promise.all([
+        pb.collection('card_holders').getList(1, 1, { filter: `company_id="${company.id}"` }),
+        pb
+          .collection('transactions')
+          .getList(1, 10, {
+            filter: `company_id="${company.id}"`,
+            sort: '-created',
+            expand: 'holder_id',
+          }),
+      ])
+      setStats({ holders: holders.totalItems, transactions: txs.totalItems })
+      setRecentTx(txs.items)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [user])
+
+  useRealtime('card_holders', loadData)
+  useRealtime('transactions', loadData)
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Company Dashboard</h1>
-        <p className="text-muted-foreground">Manage your cardholders and view transactions.</p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-1 md:col-span-2 lg:col-span-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white overflow-hidden border-none shadow-xl relative">
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 w-48 opacity-90 hidden md:block">
-            <img
-              src={cardImage}
-              alt="V CLUB Card"
-              className="w-full h-auto object-contain drop-shadow-2xl rounded-lg transform -rotate-6 hover:rotate-0 transition-transform duration-500"
-            />
-          </div>
-          <CardHeader className="relative z-10">
-            <CardTitle className="text-2xl">Welcome to V CLUB</CardTitle>
-          </CardHeader>
-          <CardContent className="md:w-2/3 relative z-10">
-            <p className="text-slate-300 text-lg">
-              Your co-branded card program is active. Start issuing cards to your customers today
-              and grow your business.
-            </p>
-          </CardContent>
-        </Card>
-
+      <h1 className="text-2xl font-bold">Dashboard da Empresa</h1>
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Cardholders</CardTitle>
-            <Users className="w-4 h-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Titulares Ativos
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">450</div>
+            <div className="text-2xl font-bold">{stats.holders}</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Volume</CardTitle>
-            <DollarSign className="w-4 h-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Transações
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 124.500</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Products</CardTitle>
-            <ShoppingCart className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">32</div>
+            <div className="text-2xl font-bold">{stats.transactions}</div>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transações Recentes</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Titular (CPF)</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentTx.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      Nenhuma transação encontrada
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentTx.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(tx.created).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {tx.expand?.holder_id?.cpf || 'Desconhecido'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">R$ {tx.amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge variant={tx.type === 'credit' ? 'default' : 'secondary'}>
+                          {tx.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            tx.status === 'approved'
+                              ? 'default'
+                              : tx.status === 'rejected'
+                                ? 'destructive'
+                                : 'outline'
+                          }
+                        >
+                          {tx.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   )
 }

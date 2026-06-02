@@ -1,0 +1,16 @@
+{
+  "name": "V Club Card",
+  "short_name": "V Club",
+  "description": "Plataforma de cartão private label e co-branded para empresas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A192F",
+  "theme_color": "#0A192F",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}
