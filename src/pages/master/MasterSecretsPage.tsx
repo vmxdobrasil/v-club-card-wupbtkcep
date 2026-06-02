@@ -1,237 +1,188 @@
-import { useEffect, useState } from 'react'
-import { Plus, Trash2, Key } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import pb from '@/lib/pocketbase/client'
-import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
+import { KeyRound, Plus, Trash2, Save } from 'lucide-react'
+import { z } from 'zod'
+
+const secretKeySchema = z.string().regex(/^[A-Z][A-Z0-9_]*$/, {
+  message:
+    'A chave deve começar com uma letra maiúscula, contendo apenas letras maiúsculas, números e sublinhados (ex: ASAAS_API_KEY).',
+})
 
 interface Secret {
   id: string
   key: string
   value: string
-  created: string
 }
 
 export default function MasterSecretsPage() {
   const [secrets, setSecrets] = useState<Secret[]>([])
   const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
-  const [key, setKey] = useState('')
-  const [value, setValue] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const { toast } = useToast()
 
-  const loadSecrets = async () => {
-    try {
-      const records = await pb.collection('platform_settings').getFullList<Secret>({
-        sort: '-created',
-      })
-      setSecrets(records)
-    } catch (err) {
-      console.error(err)
-      toast({
-        title: 'Erro ao carregar',
-        description: 'Não foi possível carregar os segredos.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [newKey, setNewKey] = useState('')
+  const [newValue, setNewValue] = useState('')
 
   useEffect(() => {
     loadSecrets()
   }, [])
 
-  const handleCreate = async () => {
-    if (!key || !value) {
-      toast({ title: 'Atenção', description: 'Preencha todos os campos', variant: 'destructive' })
+  const loadSecrets = async () => {
+    try {
+      const records = await pb.collection('platform_settings').getFullList()
+      setSecrets(records.map((r) => ({ id: r.id, key: r.key, value: r.value })))
+    } catch (error) {
+      toast.error('Erro ao carregar configurações.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddSecret = async () => {
+    if (!newKey.trim() || !newValue.trim()) {
+      toast.error('Preencha chave e valor.')
       return
     }
 
-    const keyRegex = /^[A-Z0-9_]+$/
-    if (!keyRegex.test(key)) {
-      toast({
-        title: 'Chave Inválida',
-        description:
-          'A chave deve conter apenas letras maiúsculas, números e underscores (ex: ASAAS_API_KEY).',
-        variant: 'destructive',
-      })
+    const parseResult = secretKeySchema.safeParse(newKey)
+    if (!parseResult.success) {
+      toast.error(parseResult.error.errors[0].message)
       return
     }
 
-    setSubmitting(true)
     try {
       await pb.collection('platform_settings').create({
-        key,
-        value,
+        key: newKey,
+        value: newValue,
       })
-      toast({ title: 'Sucesso', description: 'Segredo criado com sucesso.' })
-      setOpen(false)
-      setKey('')
-      setValue('')
+      toast.success('Segredo adicionado com sucesso.')
+      setNewKey('')
+      setNewValue('')
       loadSecrets()
-    } catch (err) {
-      console.error(err)
-      toast({
-        title: 'Erro ao criar',
-        description: 'Verifique se a chave já existe ou tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSubmitting(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao adicionar segredo.')
     }
   }
 
   const handleDelete = async (id: string) => {
     try {
       await pb.collection('platform_settings').delete(id)
-      toast({ title: 'Sucesso', description: 'Segredo removido com sucesso.' })
-      setSecrets((prev) => prev.filter((s) => s.id !== id))
-    } catch (err) {
-      console.error(err)
-      toast({
-        title: 'Erro ao remover',
-        description: 'Não foi possível remover o segredo.',
-        variant: 'destructive',
-      })
+      toast.success('Segredo removido.')
+      loadSecrets()
+    } catch (error) {
+      toast.error('Erro ao remover segredo.')
     }
   }
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Segredos</h1>
-          <p className="text-muted-foreground mt-1">Gerencie variáveis de ambiente e integrações</p>
-        </div>
+  const updateExisting = async (id: string, currentKey: string, newValue: string) => {
+    try {
+      await pb.collection('platform_settings').update(id, { value: newValue })
+      toast.success('Valor atualizado.')
+      loadSecrets()
+    } catch (e) {
+      toast.error('Erro ao atualizar.')
+    }
+  }
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 z-10 relative cursor-pointer" size="lg">
-              <Plus className="w-5 h-5" />
-              Novo Segredo
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Segredo</DialogTitle>
-              <DialogDescription>
-                Crie uma nova chave para uso na plataforma (ex: ASAAS_API_KEY).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="key">Chave (Key)</Label>
-                <Input
-                  id="key"
-                  placeholder="ASAAS_API_KEY"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value.toUpperCase())}
-                />
-                <span className="text-xs text-muted-foreground">
-                  Apenas maiúsculas, números e underscore (_).
-                </span>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="value">Valor (Value)</Label>
-                <Input
-                  id="value"
-                  type="password"
-                  placeholder="Seu token ou segredo..."
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreate} disabled={submitting}>
-                {submitting ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+  if (loading) return <div className="p-8">Carregando...</div>
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <KeyRound className="w-8 h-8 text-primary" />
+          Segredos e Configurações
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Gerencie as variáveis de ambiente e chaves de API da plataforma. Respeite as convenções de
+          nomenclatura.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="w-5 h-5" />
-            Chaves Configuradas
-          </CardTitle>
+          <CardTitle>Adicionar Novo Segredo</CardTitle>
           <CardDescription>
-            Estas chaves estão disponíveis para uso em hooks e integrações.
+            Use estritamente letras maiúsculas e sublinhados (ex: ASAAS_API_KEY).
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+          <div className="flex flex-col sm:flex-row items-end gap-4">
+            <div className="flex-1 space-y-2 w-full">
+              <Label>Chave (Key)</Label>
+              <Input
+                placeholder="ASAAS_API_KEY"
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value.toUpperCase())}
+              />
             </div>
-          ) : secrets.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum segredo configurado no momento.
+            <div className="flex-1 space-y-2 w-full">
+              <Label>Valor (Value)</Label>
+              <Input
+                type="password"
+                placeholder="••••••••••••"
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+              />
             </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Chave</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead className="w-[100px] text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {secrets.map((secret) => (
-                    <TableRow key={secret.id}>
-                      <TableCell className="font-mono text-sm font-medium">{secret.key}</TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        ••••••••••••••••
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer relative z-10"
-                          onClick={() => handleDelete(secret.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+            <Button onClick={handleAddSecret} className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-2" /> Adicionar
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold">Segredos Ativos</h3>
+        {secrets.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Nenhum segredo configurado.</p>
+        ) : (
+          secrets.map((secret) => (
+            <Card key={secret.id}>
+              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4">
+                <div className="flex-1 space-y-1 w-full">
+                  <Label className="text-xs text-muted-foreground">Chave</Label>
+                  <div className="font-mono text-sm font-semibold">{secret.key}</div>
+                </div>
+                <div className="flex-1 space-y-1 w-full">
+                  <Label className="text-xs text-muted-foreground">Valor</Label>
+                  <Input
+                    type="password"
+                    defaultValue={secret.value}
+                    onChange={(e) => {
+                      const updated = [...secrets]
+                      const idx = updated.findIndex((s) => s.id === secret.id)
+                      if (idx > -1) updated[idx].value = e.target.value
+                      setSecrets(updated)
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2 sm:pt-5 w-full sm:w-auto justify-end">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => updateExisting(secret.id, secret.key, secret.value)}
+                    title="Salvar alteração"
+                  >
+                    <Save className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDelete(secret.id)}
+                    title="Remover"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   )
 }

@@ -1,100 +1,119 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import {
   Sidebar,
+  SidebarProvider,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
+  SidebarMenuButton,
+  SidebarFooter,
+  SidebarRail,
   SidebarTrigger,
-  SidebarInset,
 } from '@/components/ui/sidebar'
-import { LayoutDashboard, BookOpen, Bot, Package, LogOut, Building } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
+import { LayoutDashboard, BookOpen, Package, Bot, LogOut, Plus } from 'lucide-react'
 
 interface DashboardLayoutProps {
   role: 'company' | 'holder' | 'partner'
 }
 
 export function DashboardLayout({ role }: DashboardLayoutProps) {
-  const { pathname } = useLocation()
   const { signOut } = useAuth()
+  const location = useLocation()
+  const isActive = (path: string) => location.pathname === path
 
-  const menus = {
-    company: [
-      { title: 'Dashboard', url: '/company', icon: LayoutDashboard },
-      { title: 'Catálogos', url: '/company/catalogos', icon: BookOpen },
-      { title: 'AI Agent', url: '/company/ai-agent', icon: Bot },
-    ],
-    partner: [
-      { title: 'Dashboard', url: '/partner', icon: LayoutDashboard },
-      { title: 'Produtos', url: '/partner/products', icon: Package },
-      { title: 'Catálogos', url: '/partner/catalogos', icon: BookOpen },
-    ],
-    holder: [{ title: 'Dashboard', url: '/holder', icon: LayoutDashboard }],
-  }
-
-  const roleMenu = menus[role] || []
-
-  const roleTitles = {
-    company: 'Painel da Empresa',
-    partner: 'Painel do Parceiro',
-    holder: 'Meu Cartão',
-  }
+  const basePath = `/${role}`
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader className="border-b px-4 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Building className="h-5 w-5 text-primary-foreground" />
+      <div className="flex min-h-screen w-full bg-slate-50/50">
+        <Sidebar>
+          <SidebarHeader className="h-16 flex items-center justify-center border-b border-border/50">
+            <span className="text-xl font-bold tracking-tight text-primary">V Club Card</span>
+          </SidebarHeader>
+          <SidebarContent className="px-2 py-4">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive(basePath)}>
+                  <Link to={basePath}>
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {(role === 'company' || role === 'partner') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive(`${basePath}/catalogos`)}>
+                    <Link to={`${basePath}/catalogos`}>
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Catálogos
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {role === 'partner' && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive(`${basePath}/products`)}>
+                    <Link to={`${basePath}/products`}>
+                      <Package className="w-4 h-4 mr-2" />
+                      Produtos
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {role === 'company' && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive(`${basePath}/ai-agent`)}>
+                    <Link to={`${basePath}/ai-agent`}>
+                      <Bot className="w-4 h-4 mr-2" />
+                      Agente de IA
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-4 border-t border-border/50">
+            <Button
+              variant="outline"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={signOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" /> Sair
+            </Button>
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
+
+        <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+          <header className="h-16 flex items-center justify-between px-6 border-b border-border/50 bg-white shadow-sm shrink-0 relative z-10">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <h1 className="text-lg font-semibold text-foreground hidden sm:block capitalize">
+                Painel {role}
+              </h1>
             </div>
-            <span className="text-lg font-bold">{roleTitles[role]}</span>
+            <div className="flex items-center gap-4">
+              <Button
+                size="icon"
+                variant="default"
+                className="rounded-full shadow-md hover:shadow-lg transition-all"
+                title="Nova Ação"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
+          </header>
+          <div className="flex-1 overflow-auto p-6">
+            <Outlet />
           </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Menu</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {roleMenu.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <Link to={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <div className="mt-auto p-4 border-t">
-          <SidebarMenuButton
-            onClick={signOut}
-            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </SidebarMenuButton>
-        </div>
-      </Sidebar>
-      <SidebarInset className="flex flex-col flex-1 min-w-0 bg-muted/30">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-6">
-          <SidebarTrigger />
-          <div className="flex-1" />
-        </header>
-        <main className="flex-1 p-6 overflow-auto">
-          <Outlet />
         </main>
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   )
 }
