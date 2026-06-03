@@ -45,7 +45,7 @@ const secretSchema = z.object({
     .min(1, 'A chave é obrigatória')
     .regex(
       /^[A-Z][A-Z0-9_]*$/,
-      'A chave deve ser maiúscula, alfanumérica com underscores e começar com uma letra (ex: ASAAS_API_KEY)',
+      'Keys must be uppercase alphanumeric with underscores and start with a letter (e.g., MY_SECRET_KEY)',
     ),
   value: z.string().min(1, 'O valor é obrigatório'),
 })
@@ -160,12 +160,12 @@ export default function MasterSecretsPage() {
           <DialogTrigger asChild>
             <Button className="gap-2 shadow-sm">
               <Plus className="h-5 w-5" />
-              Adicionar Integração
+              Add Configuration
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Nova Integração</DialogTitle>
+              <DialogTitle>Nova Configuração</DialogTitle>
               <DialogDescription>
                 Adicione uma nova chave de API para o sistema. Para ativar a integração com o
                 gateway de pagamento, use <strong className="text-foreground">ASAAS_API_KEY</strong>
@@ -189,7 +189,8 @@ export default function MasterSecretsPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Identificador da chave (letras maiúsculas e underscores).
+                        Keys must be uppercase alphanumeric with underscores and start with a letter
+                        (e.g., MY_SECRET_KEY)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

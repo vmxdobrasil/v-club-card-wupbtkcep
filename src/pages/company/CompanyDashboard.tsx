@@ -25,13 +25,11 @@ export default function CompanyDashboard() {
       const company = await pb.collection('companies').getFirstListItem(`owner_id="${user.id}"`)
       const [holders, txs] = await Promise.all([
         pb.collection('card_holders').getList(1, 1, { filter: `company_id="${company.id}"` }),
-        pb
-          .collection('transactions')
-          .getList(1, 10, {
-            filter: `company_id="${company.id}"`,
-            sort: '-created',
-            expand: 'holder_id',
-          }),
+        pb.collection('transactions').getList(1, 10, {
+          filter: `company_id="${company.id}"`,
+          sort: '-created',
+          expand: 'holder_id',
+        }),
       ])
       setStats({ holders: holders.totalItems, transactions: txs.totalItems })
       setRecentTx(txs.items)

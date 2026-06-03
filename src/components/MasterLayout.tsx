@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   SidebarProvider,
@@ -11,22 +10,10 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar'
-import {
-  Plus,
-  LayoutDashboard,
-  Building,
-  Trash2,
-  Key,
-  Users,
-  BookOpen,
-  Package,
-} from 'lucide-react'
-import { IntegrationDialog } from './IntegrationDialog'
-import { Button } from '@/components/ui/button'
+import { LayoutDashboard, Building, Trash2, Key, Users, BookOpen, Package } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 
 export function MasterLayout() {
-  const [integrationOpen, setIntegrationOpen] = useState(false)
   const location = useLocation()
   const { signOut } = useAuth()
 
@@ -104,15 +91,11 @@ export function MasterLayout() {
         <header className="flex h-14 items-center gap-4 border-b px-4 lg:px-6">
           <SidebarTrigger />
           <div className="flex-1" />
-          <Button variant="default" size="sm" onClick={() => setIntegrationOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Integrações
-          </Button>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6 pb-safe">
           <Outlet />
         </main>
       </SidebarInset>
-      <IntegrationDialog open={integrationOpen} onOpenChange={setIntegrationOpen} />
     </SidebarProvider>
   )
 }
