@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { useRealtime } from '@/hooks/use-realtime'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Key, Plus, Trash2, Server } from 'lucide-react'
 
@@ -45,7 +46,7 @@ const secretSchema = z.object({
     .min(1, 'A chave é obrigatória')
     .regex(
       /^[A-Z][A-Z0-9_]*$/,
-      'Keys must be uppercase alphanumeric with underscores and start with a letter (e.g., MY_SECRET_KEY)',
+      'A chave deve conter apenas letras maiúsculas, números e underscores, começando com uma letra (ex: ASAAS_API_KEY)',
     ),
   value: z.string().min(1, 'O valor é obrigatório'),
 })
@@ -96,6 +97,10 @@ export default function MasterSecretsPage() {
   useEffect(() => {
     loadSecrets()
   }, [])
+
+  useRealtime('platform_settings', () => {
+    loadSecrets()
+  })
 
   const onSubmit = async (data: SecretFormValues) => {
     try {
@@ -160,7 +165,7 @@ export default function MasterSecretsPage() {
           <DialogTrigger asChild>
             <Button className="gap-2 shadow-sm">
               <Plus className="h-5 w-5" />
-              Add Configuration
+              Adicionar Chave
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
@@ -189,8 +194,8 @@ export default function MasterSecretsPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Keys must be uppercase alphanumeric with underscores and start with a letter
-                        (e.g., MY_SECRET_KEY)
+                        A chave deve ser maiúscula, conter apenas letras, números ou underscores e
+                        iniciar com uma letra (ex: ASAAS_API_KEY).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
