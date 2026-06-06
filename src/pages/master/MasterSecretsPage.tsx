@@ -1,26 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { useRealtime } from '@/hooks/use-realtime'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Key, Plus, Trash2, Server } from 'lucide-react'
-
-import pb from '@/lib/pocketbase/client'
-import { useToast } from '@/hooks/use-toast'
-import { extractFieldErrors } from '@/lib/pocketbase/errors'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import * as z from 'zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -30,304 +13,144 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/hooks/use-toast'
+import pb from '@/lib/pocketbase/client'
 
-const PREDEFINED_KEYS = [
-  { id: 'ASAAS_API_KEY', label: 'Asaas API Key', description: 'Token de integração' },
-  { id: 'ASAAS_FEE', label: 'Taxa Asaas (%)', description: 'Ex: 13.89' },
-]
-
-const secretSchema = z.object({
-  key: z.string().min(1, 'A chave é obrigatória'),
-  value: z.string().min(1, 'O valor é obrigatório'),
+const formSchema = z.object({
+  asaasApiKey: z.string().min(1, 'Chave da API é obrigatória'),
+  asaasFee: z.string().min(1, 'Taxa/Split é obrigatório'),
 })
 
-type SecretFormValues = z.infer<typeof secretSchema>
-
-interface SecretRecord {
-  id: string
-  key: string
-  value: string
-  created: string
-  updated: string
-}
-
 export default function MasterSecretsPage() {
-  const [secrets, setSecrets] = useState<SecretRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
-  const form = useForm<SecretFormValues>({
-    resolver: zodResolver(secretSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      key: '',
-      value: '',
+      asaasApiKey: '',
+      asaasFee: '',
     },
   })
 
-  const loadSecrets = async () => {
+  useEffect(() => {
+    const loadSecrets = async () => {
+      try {
+        const records = await pb.collection('platform_settings').getFullList()
+        const apiKey = records.find((r) => r.key === 'ASAAS_API_KEY')?.value || ''
+        const fee = records.find((r) => r.key === 'ASAAS_FEE')?.value || ''
+
+        form.reset({
+          asaasApiKey: apiKey,
+          asaasFee: fee,
+        })
+      } catch (error) {
+        console.error('Failed to load secrets', error)
+      }
+    }
+    loadSecrets()
+  }, [form])
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true)
     try {
-      setLoading(true)
-      const records = await pb.collection('platform_settings').getFullList<SecretRecord>({
-        sort: '-created',
-      })
-      setSecrets(records)
-    } catch (error) {
-      console.error(error)
+      try {
+        const apiKeyRecord = await pb
+          .collection('platform_settings')
+          .getFirstListItem('key="ASAAS_API_KEY"')
+        await pb
+          .collection('platform_settings')
+          .update(apiKeyRecord.id, { value: values.asaasApiKey })
+      } catch {
+        await pb
+          .collection('platform_settings')
+          .create({ key: 'ASAAS_API_KEY', value: values.asaasApiKey })
+      }
+
+      try {
+        const feeRecord = await pb
+          .collection('platform_settings')
+          .getFirstListItem('key="ASAAS_FEE"')
+        await pb.collection('platform_settings').update(feeRecord.id, { value: values.asaasFee })
+      } catch {
+        await pb
+          .collection('platform_settings')
+          .create({ key: 'ASAAS_FEE', value: values.asaasFee })
+      }
+
       toast({
-        title: 'Erro ao carregar',
-        description: 'Não foi possível carregar as configurações.',
+        title: 'Sucesso',
+        description: 'Configurações de integração salvas com sucesso.',
+      })
+    } catch (error) {
+      toast({
         variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível salvar as configurações.',
       })
     } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadSecrets()
-  }, [])
-
-  useRealtime('platform_settings', () => {
-    loadSecrets()
-  })
-
-  const onSubmit = async (data: SecretFormValues) => {
-    try {
-      let formattedValue = data.value.trim()
-      if (
-        data.key.includes('FEE') ||
-        data.key.includes('TAXA') ||
-        data.key.includes('RATE') ||
-        formattedValue.includes('%')
-      ) {
-        formattedValue = formattedValue.replace('%', '').replace(',', '.').trim()
-      }
-
-      await pb.collection('platform_settings').create({
-        key: data.key,
-        value: formattedValue,
-      })
-      toast({ title: 'Sucesso', description: 'Configuração salva com sucesso!' })
-      setOpen(false)
-      form.reset()
-      loadSecrets()
-    } catch (error) {
-      const errors = extractFieldErrors(error)
-      if (Object.keys(errors).length > 0) {
-        Object.entries(errors).forEach(([field, message]) => {
-          form.setError(field as any, { type: 'manual', message })
-        })
-      } else {
-        toast({
-          title: 'Erro',
-          description: 'Ocorreu um erro ao salvar a chave. Verifique se ela já existe.',
-          variant: 'destructive',
-        })
-      }
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        'Tem certeza que deseja remover esta chave? Isso pode afetar os pagamentos e funcionalidades da plataforma.',
-      )
-    )
-      return
-    try {
-      await pb.collection('platform_settings').delete(id)
-      toast({ title: 'Removido', description: 'Chave removida com sucesso.' })
-      loadSecrets()
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível remover a chave.',
-        variant: 'destructive',
-      })
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Integrações</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie as chaves de API e configurações globais da plataforma.
-          </p>
-        </div>
-
-        <Dialog
-          open={open}
-          onOpenChange={(isOpen) => {
-            if (!isOpen) form.reset()
-            setOpen(isOpen)
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-sm relative z-50">
-              <Plus className="h-5 w-5" />
-              Adicionar Chave
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] z-[100]">
-            <DialogHeader>
-              <DialogTitle>Nova Configuração</DialogTitle>
-              <DialogDescription>
-                Adicione uma nova chave de API ou configuração para o sistema.
-              </DialogDescription>
-            </DialogHeader>
-
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-4">
-                <FormField
-                  control={form.control}
-                  name="key"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome da Configuração</FormLabel>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {PREDEFINED_KEYS.map((pk) => (
-                          <Button
-                            key={pk.id}
-                            type="button"
-                            variant={field.value === pk.id ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => field.onChange(pk.id)}
-                          >
-                            {pk.label}
-                          </Button>
-                        ))}
-                      </div>
-                      <FormControl>
-                        <Input
-                          placeholder="Ex: ASAAS_API_KEY"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value.trim())}
-                        />
-                      </FormControl>
-                      <FormDescription>Identificador da configuração.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="value"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Ex: $aact_... ou 13.89"
-                          {...field}
-                          type={
-                            form.watch('key')?.includes('KEY') ||
-                            form.watch('key')?.includes('SECRET') ||
-                            form.watch('key')?.includes('TOKEN')
-                              ? 'password'
-                              : 'text'
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Para taxas (percentual), use ponto como separador (ex: 13.89).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter className="pt-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit">Salvar Configuração</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Secrets e Integrações</h1>
+        <p className="text-muted-foreground">
+          Configure as chaves de API e regras de negócio globais da plataforma.
+        </p>
       </div>
 
-      <Card className="shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Server className="h-5 w-5 text-muted-foreground" />
-            Chaves Configuradas
-          </CardTitle>
+          <CardTitle>Integração Asaas</CardTitle>
           <CardDescription>
-            As chaves listadas abaixo estão ativas e em uso pelos serviços de backend.
+            Configure as credenciais do Asaas para emissão de cobranças e split de pagamentos. A
+            chave da API correta sempre começa com o prefixo $aact_
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : secrets.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground flex flex-col items-center gap-3 bg-muted/10 rounded-lg border border-dashed">
-              <Key className="h-10 w-10 text-muted-foreground/40" />
-              <div>
-                <p className="font-medium text-foreground">Nenhuma integração configurada</p>
-                <p className="text-sm">Clique em "Adicionar Integração" para começar.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead>Identificador da Chave</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead className="w-[100px] text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {secrets.map((secret) => (
-                    <TableRow key={secret.id}>
-                      <TableCell className="font-medium">{secret.key}</TableCell>
-                      <TableCell>
-                        {secret.key.includes('KEY') ||
-                        secret.key.includes('SECRET') ||
-                        secret.key.includes('TOKEN') ? (
-                          <span className="text-muted-foreground tracking-widest font-mono text-xs">
-                            ••••••••••••••••••••••••••••
-                          </span>
-                        ) : (
-                          <span className="font-mono text-sm">{secret.value}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDelete(secret.id)}
-                          title="Remover chave"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="asaasApiKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chave de API (Access Token)</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="$aact_..." {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Token gerado no painel do Asaas (Configurações da Conta {'>'} Integrações).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="asaasFee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Taxa / Split Padrão V Club (%)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="13.89" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Porcentagem padrão retida pela V Club Card em cada transação via Asaas.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Salvando...' : 'Salvar Configurações'}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
