@@ -40,13 +40,18 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 
+const PREDEFINED_KEYS = [
+  { id: 'ASAAS_API_KEY', label: 'Asaas API Key', description: 'Token de integração' },
+  { id: 'ASAAS_FEE', label: 'Taxa Asaas (%)', description: 'Ex: 13.89' },
+]
+
 const secretSchema = z.object({
   key: z
     .string()
     .min(1, 'A chave é obrigatória')
     .regex(
-      /^[A-Z][A-Z0-9_]*$/,
-      'A chave deve conter apenas letras maiúsculas, números e underscores, começando com uma letra (ex: ASAAS_API_KEY)',
+      /^[A-Z0-9_\-=]+$/,
+      'A chave deve conter apenas letras maiúsculas, números, hifens, underscores e sinal de igual.',
     ),
   value: z.string().min(1, 'O valor é obrigatório'),
 })
@@ -104,8 +109,21 @@ export default function MasterSecretsPage() {
 
   const onSubmit = async (data: SecretFormValues) => {
     try {
-      await pb.collection('platform_settings').create(data)
-      toast({ title: 'Sucesso', description: 'Integração salva com sucesso!' })
+      let formattedValue = data.value.trim()
+      if (
+        data.key.includes('FEE') ||
+        data.key.includes('TAXA') ||
+        data.key.includes('RATE') ||
+        formattedValue.includes('%')
+      ) {
+        formattedValue = formattedValue.replace('%', '').replace(',', '.').trim()
+      }
+
+      await pb.collection('platform_settings').create({
+        key: data.key,
+        value: formattedValue,
+      })
+      toast({ title: 'Sucesso', description: 'Configuração salva com sucesso!' })
       setOpen(false)
       form.reset()
       loadSecrets()
@@ -163,7 +181,7 @@ export default function MasterSecretsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button className="gap-2 shadow-sm">
+            <Button className="gap-2 shadow-sm relative z-10">
               <Plus className="h-5 w-5" />
               Adicionar Chave
             </Button>
@@ -172,9 +190,7 @@ export default function MasterSecretsPage() {
             <DialogHeader>
               <DialogTitle>Nova Configuração</DialogTitle>
               <DialogDescription>
-                Adicione uma nova chave de API para o sistema. Para ativar a integração com o
-                gateway de pagamento, use <strong className="text-foreground">ASAAS_API_KEY</strong>
-                .
+                Adicione uma nova chave de API ou configuração para o sistema.
               </DialogDescription>
             </DialogHeader>
 
@@ -185,17 +201,29 @@ export default function MasterSecretsPage() {
                   name="key"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome da Chave</FormLabel>
+                      <FormLabel>Nome da Configuração</FormLabel>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {PREDEFINED_KEYS.map((pk) => (
+                          <Button
+                            key={pk.id}
+                            type="button"
+                            variant={field.value === pk.id ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => field.onChange(pk.id)}
+                          >
+                            {pk.label}
+                          </Button>
+                        ))}
+                      </div>
                       <FormControl>
                         <Input
                           placeholder="Ex: ASAAS_API_KEY"
                           {...field}
-                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase().trim())}
                         />
                       </FormControl>
                       <FormDescription>
-                        A chave deve ser maiúscula, conter apenas letras, números ou underscores e
-                        iniciar com uma letra (ex: ASAAS_API_KEY).
+                        Identificador da configuração (maiúsculas, números, hifens e underscores).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -207,10 +235,23 @@ export default function MasterSecretsPage() {
                   name="value"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Valor (Token/Secret)</FormLabel>
+                      <FormLabel>Valor</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Cole o token aqui" {...field} />
+                        <Input
+                          placeholder="Ex: $aact_... ou 13.89"
+                          {...field}
+                          type={
+                            form.watch('key')?.includes('KEY') ||
+                            form.watch('key')?.includes('SECRET') ||
+                            form.watch('key')?.includes('TOKEN')
+                              ? 'password'
+                              : 'text'
+                          }
+                        />
                       </FormControl>
+                      <FormDescription>
+                        Para taxas (percentual), use ponto como separador (ex: 13.89).
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -268,9 +309,15 @@ export default function MasterSecretsPage() {
                     <TableRow key={secret.id}>
                       <TableCell className="font-medium">{secret.key}</TableCell>
                       <TableCell>
-                        <span className="text-muted-foreground tracking-widest font-mono text-xs">
-                          ••••••••••••••••••••••••••••
-                        </span>
+                        {secret.key.includes('KEY') ||
+                        secret.key.includes('SECRET') ||
+                        secret.key.includes('TOKEN') ? (
+                          <span className="text-muted-foreground tracking-widest font-mono text-xs">
+                            ••••••••••••••••••••••••••••
+                          </span>
+                        ) : (
+                          <span className="font-mono text-sm">{secret.value}</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
