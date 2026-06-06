@@ -26,6 +26,9 @@ export default function MasterSecretsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
+  const [apiKeyRecordId, setApiKeyRecordId] = useState<string | null>(null)
+  const [feeRecordId, setFeeRecordId] = useState<string | null>(null)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -38,12 +41,15 @@ export default function MasterSecretsPage() {
     const loadSecrets = async () => {
       try {
         const records = await pb.collection('platform_settings').getFullList()
-        const apiKey = records.find((r) => r.key === 'ASAAS_API_KEY')?.value || ''
-        const fee = records.find((r) => r.key === 'ASAAS_FEE')?.value || ''
+        const apiKeyRecord = records.find((r) => r.key === 'ASAAS_API_KEY')
+        const feeRecord = records.find((r) => r.key === 'ASAAS_FEE')
+
+        if (apiKeyRecord) setApiKeyRecordId(apiKeyRecord.id)
+        if (feeRecord) setFeeRecordId(feeRecord.id)
 
         form.reset({
-          asaasApiKey: apiKey,
-          asaasFee: fee,
+          asaasApiKey: apiKeyRecord?.value || '',
+          asaasFee: feeRecord?.value || '',
         })
       } catch (error) {
         console.error('Failed to load secrets', error)
@@ -55,39 +61,35 @@ export default function MasterSecretsPage() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true)
     try {
-      try {
-        const apiKeyRecord = await pb
-          .collection('platform_settings')
-          .getFirstListItem('key="ASAAS_API_KEY"')
+      if (apiKeyRecordId) {
         await pb
           .collection('platform_settings')
-          .update(apiKeyRecord.id, { value: values.asaasApiKey })
-      } catch {
-        await pb
+          .update(apiKeyRecordId, { value: values.asaasApiKey })
+      } else {
+        const newRecord = await pb
           .collection('platform_settings')
           .create({ key: 'ASAAS_API_KEY', value: values.asaasApiKey })
+        setApiKeyRecordId(newRecord.id)
       }
 
-      try {
-        const feeRecord = await pb
-          .collection('platform_settings')
-          .getFirstListItem('key="ASAAS_FEE"')
-        await pb.collection('platform_settings').update(feeRecord.id, { value: values.asaasFee })
-      } catch {
-        await pb
+      if (feeRecordId) {
+        await pb.collection('platform_settings').update(feeRecordId, { value: values.asaasFee })
+      } else {
+        const newRecord = await pb
           .collection('platform_settings')
           .create({ key: 'ASAAS_FEE', value: values.asaasFee })
+        setFeeRecordId(newRecord.id)
       }
 
       toast({
         title: 'Sucesso',
         description: 'Configurações de integração salvas com sucesso.',
       })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro',
-        description: 'Não foi possível salvar as configurações.',
+        description: error?.message || 'Não foi possível salvar as configurações.',
       })
     } finally {
       setIsLoading(false)
