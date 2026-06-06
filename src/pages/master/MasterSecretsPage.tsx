@@ -46,13 +46,7 @@ const PREDEFINED_KEYS = [
 ]
 
 const secretSchema = z.object({
-  key: z
-    .string()
-    .min(1, 'A chave é obrigatória')
-    .regex(
-      /^[A-Z0-9_\-=]+$/,
-      'A chave deve conter apenas letras maiúsculas, números, hifens, underscores e sinal de igual.',
-    ),
+  key: z.string().min(1, 'A chave é obrigatória'),
   value: z.string().min(1, 'O valor é obrigatório'),
 })
 
@@ -181,12 +175,12 @@ export default function MasterSecretsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button className="gap-2 shadow-sm relative z-10">
+            <Button className="gap-2 shadow-sm relative z-50">
               <Plus className="h-5 w-5" />
               Adicionar Chave
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] z-[100]">
             <DialogHeader>
               <DialogTitle>Nova Configuração</DialogTitle>
               <DialogDescription>
@@ -219,12 +213,10 @@ export default function MasterSecretsPage() {
                         <Input
                           placeholder="Ex: ASAAS_API_KEY"
                           {...field}
-                          onChange={(e) => field.onChange(e.target.value.toUpperCase().trim())}
+                          onChange={(e) => field.onChange(e.target.value.trim())}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Identificador da configuração (maiúsculas, números, hifens e underscores).
-                      </FormDescription>
+                      <FormDescription>Identificador da configuração.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
