@@ -18,8 +18,21 @@ import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
 
 const formSchema = z.object({
-  asaasApiKey: z.string().min(1, 'Chave da API é obrigatória'),
-  asaasFee: z.string().min(1, 'Taxa/Split é obrigatório'),
+  asaasApiKey: z
+    .string()
+    .min(1, 'Chave da API é obrigatória')
+    .refine((val) => val.startsWith('$aact_'), {
+      message: 'A chave deve começar com $aact_',
+    }),
+  asaasFee: z
+    .string()
+    .min(1, 'Taxa/Split é obrigatório')
+    .refine((val) => !val.includes('%'), {
+      message: 'Não inclua o sinal de porcentagem (%)',
+    })
+    .refine((val) => !isNaN(Number(val.replace(',', '.'))), {
+      message: 'Deve ser um número válido',
+    }),
 })
 
 export default function MasterSecretsPage() {
@@ -61,6 +74,8 @@ export default function MasterSecretsPage() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true)
     try {
+      const normalizedFee = values.asaasFee.replace(',', '.')
+
       if (apiKeyRecordId) {
         await pb
           .collection('platform_settings')
@@ -73,11 +88,11 @@ export default function MasterSecretsPage() {
       }
 
       if (feeRecordId) {
-        await pb.collection('platform_settings').update(feeRecordId, { value: values.asaasFee })
+        await pb.collection('platform_settings').update(feeRecordId, { value: normalizedFee })
       } else {
         const newRecord = await pb
           .collection('platform_settings')
-          .create({ key: 'ASAAS_FEE', value: values.asaasFee })
+          .create({ key: 'ASAAS_FEE', value: normalizedFee })
         setFeeRecordId(newRecord.id)
       }
 
@@ -97,7 +112,7 @@ export default function MasterSecretsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Secrets e Integrações</h1>
         <p className="text-muted-foreground">
@@ -139,10 +154,11 @@ export default function MasterSecretsPage() {
                   <FormItem>
                     <FormLabel>Taxa / Split Padrão V Club (%)</FormLabel>
                     <FormControl>
-                      <Input placeholder="13.89" {...field} />
+                      <Input placeholder="11.00" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Porcentagem padrão retida pela V Club Card em cada transação via Asaas.
+                      Porcentagem padrão retida pela V Club Card em cada transação via Asaas. Apenas
+                      números (ex: 11.00). O sinal de porcentagem (%) não é necessário.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

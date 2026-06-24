@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building, Users, CreditCard, DollarSign } from 'lucide-react'
+import { Building, Users, CreditCard, DollarSign, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 
 export default function MasterDashboard() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     companies: 0,
     holders: 0,
@@ -42,9 +45,19 @@ export default function MasterDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard Master</h1>
-        <p className="text-muted-foreground">Visão geral da plataforma V Club Card.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard Master</h1>
+          <p className="text-muted-foreground">Visão geral da plataforma V Club Card.</p>
+        </div>
+        <Button
+          onClick={(e) => {
+            e.preventDefault()
+            navigate('/companies')
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Nova Empresa
+        </Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
