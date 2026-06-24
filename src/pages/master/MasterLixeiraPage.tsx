@@ -70,9 +70,9 @@ export default function MasterLixeiraPage() {
   }
 
   const renderTable = (items: any[], collection: string, nameField: string) => (
-    <div className="bg-white rounded-lg border shadow-sm mt-4">
+    <div className="bg-card rounded-xl border shadow-lg mt-4 overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead>Identificador</TableHead>
             <TableHead>Data de Exclusão</TableHead>
@@ -81,18 +81,21 @@ export default function MasterLixeiraPage() {
         </TableHeader>
         <TableBody>
           {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">
+            <TableRow key={item.id} className="hover:bg-muted/50 transition-colors">
+              <TableCell className="font-medium text-foreground">
                 {collection === 'card_holders'
                   ? item.expand?.user_id?.name || item.card_number
                   : item[nameField]}
               </TableCell>
-              <TableCell>{new Date(item.deleted_at).toLocaleString()}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {new Date(item.deleted_at).toLocaleString()}
+              </TableCell>
               <TableCell className="text-right space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleRestore(collection, item.id)}
+                  className="bg-transparent"
                 >
                   <RefreshCw className="w-3 h-3 mr-1" /> Restaurar
                 </Button>
@@ -108,7 +111,7 @@ export default function MasterLixeiraPage() {
           ))}
           {items.length === 0 && (
             <TableRow>
-              <TableCell colSpan={3} className="text-center py-6 text-slate-500">
+              <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
                 Lixeira vazia para esta categoria.
               </TableCell>
             </TableRow>
@@ -121,8 +124,8 @@ export default function MasterLixeiraPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Lixeira</h2>
-        <p className="text-sm text-slate-500">
+        <h2 className="text-3xl font-bold tracking-tight">Lixeira</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Gerencie registros excluídos. Registros aqui podem ser restaurados ou permanentemente
           deletados.
         </p>

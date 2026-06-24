@@ -132,11 +132,11 @@ export default function MasterCatalogsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Catálogos</h1>
-          <p className="text-gray-500 mt-1">Gerencie os catálogos de produtos e serviços</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Catálogos</h1>
+          <p className="text-muted-foreground mt-1">Gerencie os catálogos de produtos e serviços</p>
         </div>
 
         <Dialog
@@ -147,7 +147,7 @@ export default function MasterCatalogsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button>
               <Plus className="w-4 h-4 mr-2" /> Novo Catálogo
             </Button>
           </DialogTrigger>
@@ -213,11 +213,7 @@ export default function MasterCatalogsPage() {
                 >
                   Cancelar
                 </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
+                <Button onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
@@ -226,9 +222,9 @@ export default function MasterCatalogsPage() {
         </Dialog>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-card border rounded-xl shadow-lg overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50">
+          <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
@@ -240,34 +236,39 @@ export default function MasterCatalogsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : catalogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                   Nenhum catálogo encontrado.
                 </TableCell>
               </TableRow>
             ) : (
               catalogs.map((c) => (
-                <TableRow key={c.id} className="group">
-                  <TableCell className="font-medium text-gray-900">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-gray-400" />
+                <TableRow key={c.id} className="group hover:bg-muted/50 transition-colors">
+                  <TableCell className="font-medium text-foreground">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded bg-primary/10 text-primary">
+                        <BookOpen className="w-4 h-4" />
+                      </div>
                       {c.name}
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-500 max-w-xs truncate" title={c.description}>
+                  <TableCell
+                    className="text-muted-foreground max-w-xs truncate"
+                    title={c.description}
+                  >
                     {c.description || '-'}
                   </TableCell>
-                  <TableCell className="text-gray-600">
+                  <TableCell className="text-muted-foreground">
                     {c.expand?.company_id?.name || 'Empresa Desconhecida'}
                   </TableCell>
                   <TableCell>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${c.status === 'active' ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'}`}
                     >
                       {c.status === 'active' ? 'Ativo' : 'Inativo'}
                     </span>
@@ -280,7 +281,7 @@ export default function MasterCatalogsPage() {
                         onClick={() => openEdit(c)}
                         title="Editar"
                       >
-                        <Pencil className="w-4 h-4 text-blue-600" />
+                        <Pencil className="w-4 h-4 text-primary" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -288,7 +289,7 @@ export default function MasterCatalogsPage() {
                         onClick={() => handleDelete(c.id)}
                         title="Excluir"
                       >
-                        <Trash className="w-4 h-4 text-red-600" />
+                        <Trash className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>

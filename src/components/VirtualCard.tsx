@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import pb from '@/lib/pocketbase/client'
+import { Nfc } from 'lucide-react'
 
 interface VirtualCardProps {
   company?: any
@@ -9,23 +9,14 @@ interface VirtualCardProps {
   className?: string
 }
 
-export function VirtualCard({
-  company,
-  cardNumber,
-  holderName,
-  expiry,
-  className,
-}: VirtualCardProps) {
-  const logoUrl = company?.logo ? pb.files.getURL(company, company.logo) : null
-  const defaultNumber = '••••  ••••  ••••  ••••'
-  const defaultName = 'NOME DO USUÁRIO'
+export function VirtualCard({ cardNumber, holderName, expiry, className }: VirtualCardProps) {
+  const defaultNumber = '•••• •••• •••• ••••'
+  const defaultName = 'CLIENTE V CLUB'
   const defaultExpiry = 'MM/AA'
 
-  const formatCardNumber = (number: string) => {
-    return number.replace(/(\d{4})/g, '$1 ').trim()
-  }
-
-  const displayCardNumber = cardNumber ? formatCardNumber(cardNumber) : defaultNumber
+  const displayCardNumber = cardNumber
+    ? cardNumber.replace(/(\d{4})/g, '$1 ').trim()
+    : defaultNumber
 
   const displayExpiry = expiry
     ? new Date(expiry).toLocaleDateString('pt-BR', { month: '2-digit', year: '2-digit' })
@@ -34,93 +25,74 @@ export function VirtualCard({
   return (
     <div
       className={cn(
-        'relative w-full aspect-[1.586/1] rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 flex flex-col justify-between border border-slate-700/50',
+        'relative w-full max-w-sm aspect-[1.586/1] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 text-white p-5 flex flex-col justify-between border border-white/20',
         className,
       )}
     >
       {/* Decorative background elements */}
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-300/20 rounded-full blur-2xl -ml-16 -mb-16 pointer-events-none" />
 
-      {/* Card Header (Logo + Type) */}
+      {/* Card Header (Logo + Contactless) */}
       <div className="flex justify-between items-start z-10 relative">
-        <div className="h-10 flex items-center">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="Logo da Empresa"
-              className="h-full max-w-[140px] object-contain drop-shadow-md"
-            />
-          ) : (
-            <div className="text-xl font-bold tracking-tight text-white/90">
-              {company?.name || 'V Club Card'}
+        <div className="flex items-center gap-2">
+          {/* Logo V CLUB */}
+          <div className="flex bg-white rounded p-1 shadow-md">
+            <div className="bg-[#1e3a8a] text-white px-2 py-0.5 rounded-l text-xl font-bold italic relative">
+              V
+              <div className="absolute -top-2 -right-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"></div>
             </div>
-          )}
+            <div className="bg-red-600 text-white px-2 py-0.5 rounded-r text-xl font-bold">
+              CLUB
+            </div>
+          </div>
         </div>
-        <svg
-          className="w-10 h-10 opacity-80"
-          viewBox="0 0 48 48"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M24 48C37.2548 48 48 37.2548 48 24C48 10.7452 37.2548 0 24 0C10.7452 0 0 10.7452 0 24C0 37.2548 10.7452 48 24 48Z"
-            fill="url(#paint0_linear)"
-          />
-          <path
-            d="M24 48C37.2548 48 48 37.2548 48 24C48 10.7452 37.2548 0 24 0C10.7452 0 0 10.7452 0 24C0 37.2548 10.7452 48 24 48Z"
-            fill="url(#paint1_linear)"
-            fillOpacity="0.5"
-          />
-          <defs>
-            <linearGradient
-              id="paint0_linear"
-              x1="14"
-              y1="0"
-              x2="34"
-              y2="48"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="#FFF" stopOpacity="0.3" />
-              <stop offset="1" stopColor="#FFF" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient
-              id="paint1_linear"
-              x1="0"
-              y1="24"
-              x2="48"
-              y2="24"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="#FFF" stopOpacity="0" />
-              <stop offset="1" stopColor="#FFF" stopOpacity="0.3" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <Nfc className="w-6 h-6 opacity-80" />
       </div>
 
       {/* Card Body (Chip & Number) */}
-      <div className="z-10 space-y-5 mt-4">
-        <div className="w-12 h-9 rounded bg-gradient-to-br from-yellow-200 to-yellow-500 flex items-center justify-center opacity-90 shadow-sm border border-yellow-600/30">
-          <div className="w-full h-full border border-yellow-700/20 rounded-[3px] opacity-50 relative">
-            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-yellow-700/20"></div>
-            <div className="absolute left-1/2 top-0 w-[1px] h-full bg-yellow-700/20"></div>
+      <div className="z-10 space-y-4 mt-2">
+        <div className="w-12 h-9 rounded bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center opacity-90 shadow-inner border border-slate-400">
+          {/* Silver Chip */}
+          <div className="w-full h-full border border-slate-500/50 rounded-[3px] opacity-70 relative">
+            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-slate-500/50"></div>
+            <div className="absolute left-1/2 top-0 w-[1px] h-full bg-slate-500/50"></div>
           </div>
         </div>
 
-        <div className="font-mono text-2xl md:text-[1.65rem] tracking-[0.15em] text-white/95 drop-shadow-sm font-medium">
+        <div
+          className="font-mono text-2xl tracking-[0.15em] text-slate-100 drop-shadow-md font-bold"
+          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5), -1px -1px 1px rgba(255,255,255,0.3)' }}
+        >
           {displayCardNumber}
         </div>
       </div>
 
       {/* Card Footer (Name & Expiry) */}
-      <div className="flex justify-between items-end z-10 mt-2">
-        <div className="font-semibold tracking-widest uppercase text-sm text-white/90 truncate max-w-[70%]">
-          {holderName || defaultName}
+      <div className="flex justify-between items-end z-10 mt-1">
+        <div className="flex flex-col">
+          <div className="font-cursive text-3xl text-white/90 drop-shadow-sm -mb-2 -ml-1">
+            Faz mais por você!
+          </div>
+          <div
+            className="font-semibold tracking-widest uppercase text-sm text-slate-100 drop-shadow-md truncate max-w-[200px]"
+            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
+          >
+            {holderName || defaultName}
+          </div>
         </div>
-        <div className="text-right">
-          <div className="uppercase text-[9px] tracking-wider text-white/60 mb-[2px]">Validade</div>
-          <div className="font-mono text-sm tracking-wider text-white/90">{displayExpiry}</div>
+        <div className="text-right flex items-center gap-2">
+          <div className="uppercase text-[7px] leading-tight tracking-wider text-white/80 text-left">
+            VALID
+            <br />
+            THRU
+          </div>
+          <div
+            className="font-mono text-sm tracking-wider text-slate-100 drop-shadow-md font-bold"
+            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
+          >
+            {displayExpiry}
+          </div>
         </div>
       </div>
     </div>

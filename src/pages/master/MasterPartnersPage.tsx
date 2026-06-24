@@ -5,16 +5,9 @@ import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Trash2, Edit2, Store } from 'lucide-react'
 
 export default function MasterPartnersPage() {
   const [partners, setPartners] = useState<any[]>([])
@@ -90,51 +83,75 @@ export default function MasterPartnersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Contas Lojistas (Parceiros)</h2>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Contas Lojistas</h2>
+          <p className="text-muted-foreground mt-1">
+            Gerencie os parceiros e lojistas credenciados.
+          </p>
+        </div>
         <Button onClick={openNew}>
           <Plus className="w-4 h-4 mr-2" /> Novo Parceiro
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {partners.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name || 'Sem nome'}</TableCell>
-                <TableCell>{p.email}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                    <Edit2 className="w-4 h-4 text-blue-600" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {partners.map((p) => (
+          <Card
+            key={p.id}
+            className="relative overflow-hidden group hover:border-accent/50 transition-colors shadow-lg"
+          >
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-accent" />
+            <CardContent className="p-6 pl-8 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
+                    <Store className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg leading-tight line-clamp-1">
+                      {p.name || 'Sem nome'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-0.5">{p.email}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary/20 text-secondary-foreground border border-secondary/20">
+                  Parceiro
+                </span>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={() => openEdit(p)}
+                  >
+                    <Edit2 className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-                    <Trash2 className="w-4 h-4 text-red-600" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(p.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {partners.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-slate-500">
-                  Nenhum parceiro encontrado.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {partners.length === 0 && (
+          <div className="col-span-full py-12 text-center text-muted-foreground bg-card rounded-xl border border-border shadow-sm">
+            Nenhum parceiro encontrado.
+          </div>
+        )}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Editar Parceiro' : 'Novo Parceiro'}</DialogTitle>
           </DialogHeader>
@@ -145,6 +162,7 @@ export default function MasterPartnersPage() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Nome"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
@@ -155,6 +173,7 @@ export default function MasterPartnersPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="email@loja.com"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
@@ -164,11 +183,12 @@ export default function MasterPartnersPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="******"
+                className="bg-card"
               />
             </div>
           </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSave}>Salvar</Button>

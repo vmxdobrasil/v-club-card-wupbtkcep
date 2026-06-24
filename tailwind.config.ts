@@ -27,6 +27,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        cursive: ['"Great Vibes"', 'cursive'],
       },
       colors: {
         border: 'hsl(var(--border))',

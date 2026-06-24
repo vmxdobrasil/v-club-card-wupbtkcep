@@ -120,9 +120,9 @@ export default function MasterHoldersPage() {
         </Dialog>
       </div>
 
-      <div className="bg-white rounded-md shadow border">
+      <div className="bg-card rounded-xl shadow-lg border overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Empresa</TableHead>
@@ -133,13 +133,21 @@ export default function MasterHoldersPage() {
           </TableHeader>
           <TableBody>
             {holders.map((holder) => (
-              <TableRow key={holder.id}>
-                <TableCell>{holder.expand?.user_id?.name || 'N/A'}</TableCell>
-                <TableCell>{holder.expand?.company_id?.name || 'N/A'}</TableCell>
-                <TableCell>{holder.card_number || 'N/A'}</TableCell>
-                <TableCell>R$ {holder.total_limit?.toFixed(2)}</TableCell>
+              <TableRow key={holder.id} className="hover:bg-muted/50 transition-colors">
+                <TableCell className="font-medium text-foreground">
+                  {holder.expand?.user_id?.name || 'N/A'}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {holder.expand?.company_id?.name || 'N/A'}
+                </TableCell>
+                <TableCell className="font-mono text-muted-foreground">
+                  {holder.card_number || 'N/A'}
+                </TableCell>
+                <TableCell className="font-medium">R$ {holder.total_limit?.toFixed(2)}</TableCell>
                 <TableCell>
-                  <span className="capitalize px-2 py-1 bg-gray-100 rounded text-sm">
+                  <span
+                    className={`capitalize px-2.5 py-0.5 rounded-full text-xs font-semibold ${holder.status === 'active' ? 'bg-success/20 text-success' : holder.status === 'blocked' ? 'bg-warning/20 text-warning' : 'bg-destructive/20 text-destructive'}`}
+                  >
                     {holder.status}
                   </span>
                 </TableCell>
@@ -147,7 +155,7 @@ export default function MasterHoldersPage() {
             ))}
             {holders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   Nenhum portador encontrado.
                 </TableCell>
               </TableRow>

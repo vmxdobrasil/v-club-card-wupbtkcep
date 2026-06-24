@@ -59,41 +59,69 @@ export default function MasterDashboard() {
           <Plus className="mr-2 h-4 w-4" /> Nova Empresa
         </Button>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-t-4 border-t-primary shadow-lg relative overflow-hidden bg-card/50 backdrop-blur-sm">
+          <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none">
+            <Building className="w-32 h-32" />
+          </div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Empresas</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Empresas
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <Building className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.companies}</div>
+            <div className="text-3xl font-bold">{stats.companies}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-t-accent shadow-lg relative overflow-hidden bg-card/50 backdrop-blur-sm">
+          <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none">
+            <Users className="w-32 h-32" />
+          </div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Titulares</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Titulares
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center">
+              <Users className="h-4 w-4 text-accent" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.holders}</div>
+            <div className="text-3xl font-bold">{stats.holders}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-t-[#06b6d4] shadow-lg relative overflow-hidden bg-card/50 backdrop-blur-sm">
+          <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none">
+            <CreditCard className="w-32 h-32" />
+          </div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cartões Ativos</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Cartões Ativos
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-[#06b6d4]/20 flex items-center justify-center">
+              <CreditCard className="h-4 w-4 text-[#06b6d4]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeCards}</div>
+            <div className="text-3xl font-bold">{stats.activeCards}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-t-success shadow-lg relative overflow-hidden bg-card/50 backdrop-blur-sm">
+          <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none">
+            <DollarSign className="w-32 h-32" />
+          </div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume Transacionado</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Volume Transacionado
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-success/20 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-success" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-success">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                 stats.volume,
               )}

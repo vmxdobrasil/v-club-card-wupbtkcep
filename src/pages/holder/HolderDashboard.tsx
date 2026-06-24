@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { VirtualCard } from '@/components/VirtualCard'
 
 export default function HolderDashboard() {
   const { user } = useAuth()
@@ -47,39 +48,44 @@ export default function HolderDashboard() {
       <h1 className="text-2xl font-bold">Meu Cartão</h1>
 
       {holder && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card className="bg-primary text-primary-foreground">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium opacity-80">Limite Disponível</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                R$ {Math.max(0, holder.total_limit - holder.used_limit).toFixed(2)}
-              </div>
-              <div className="text-sm opacity-80 mt-2">
-                Limite Total: R$ {holder.total_limit.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-8 lg:grid-cols-2 items-start">
+          <div className="flex justify-center w-full max-w-sm mx-auto">
+            <VirtualCard
+              cardNumber={holder.card_number}
+              holderName={user.name}
+              expiry={holder.expiry}
+            />
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Status do Cartão
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge
-                variant={holder.status === 'active' ? 'default' : 'destructive'}
-                className="mt-2 text-lg px-4 py-1 uppercase"
-              >
-                {holder.status}
-              </Badge>
-              <div className="text-sm text-muted-foreground mt-4 font-mono">
-                **** **** **** {holder.card_number?.slice(-4) || 'XXXX'}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card className="bg-card shadow-lg border-primary/20">
+              <CardHeader className="pb-2 border-b border-border/50">
+                <CardTitle className="text-lg font-medium text-muted-foreground">
+                  Resumo de Limites
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="text-4xl font-bold text-primary mb-2">
+                  R$ {Math.max(0, holder.total_limit - holder.used_limit).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground font-medium">Limite Disponível</div>
+
+                <div className="mt-6 pt-6 border-t border-border/50 flex justify-between items-center">
+                  <div className="text-sm text-muted-foreground">Limite Total:</div>
+                  <div className="font-semibold">R$ {holder.total_limit.toFixed(2)}</div>
+                </div>
+                <div className="mt-3 flex justify-between items-center">
+                  <div className="text-sm text-muted-foreground">Status do Cartão:</div>
+                  <Badge
+                    variant={holder.status === 'active' ? 'default' : 'destructive'}
+                    className="uppercase tracking-wider"
+                  >
+                    {holder.status}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 
