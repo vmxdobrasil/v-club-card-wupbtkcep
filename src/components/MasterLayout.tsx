@@ -10,7 +10,16 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar'
-import { LayoutDashboard, Building, Trash2, Key, Users, BookOpen, Package } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Building,
+  Trash2,
+  Key,
+  Users,
+  BookOpen,
+  Package,
+  CreditCard,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
 
@@ -72,6 +81,13 @@ export function MasterLayout() {
               <SidebarMenuButton asChild isActive={location.pathname === '/lixeira'}>
                 <Link to="/lixeira">
                   <Trash2 /> Lixeira
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.pathname === '/master/asaas'}>
+                <Link to="/master/asaas">
+                  <CreditCard /> Integração Asaas
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

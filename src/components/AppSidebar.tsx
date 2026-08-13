@@ -30,6 +30,7 @@ export function AppSidebar() {
   const navItems = {
     master: [
       { title: 'Início', url: '/master', icon: LayoutDashboard },
+      { title: 'Integração Asaas', url: '/master/asaas', icon: CreditCard },
       { title: 'Lixeira', url: '/bin', icon: CreditCard },
       { title: 'Empresas', url: '/companies', icon: Store },
       { title: 'Catálogos', url: '/catalogos', icon: Store },

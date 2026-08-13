@@ -9,12 +9,13 @@ import {
   Receipt,
   ShieldCheck,
 } from 'lucide-react'
-import useAuthStore from '@/stores/use-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-b53dc.jpeg'
 
 export function SidebarNav() {
-  const { role } = useAuthStore()
+  const { user } = useAuth()
+  const role = user?.role
 
   const links = {
     master: [

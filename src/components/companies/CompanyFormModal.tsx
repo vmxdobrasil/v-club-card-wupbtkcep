@@ -55,7 +55,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSuccess }: Compan
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
+    resolver: zodResolver(companySchema) as any,
     defaultValues: {
       name: '',
       cnpj: '',

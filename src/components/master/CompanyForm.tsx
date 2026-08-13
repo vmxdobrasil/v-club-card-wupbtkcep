@@ -123,7 +123,7 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
   }, [open])
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: '',
       cnpj: '',
@@ -132,7 +132,6 @@ export function CompanyForm({ open, onOpenChange, company, companies, onSuccess 
       modality: '1',
       gateway_provider: 'Asaas',
       status: 'active',
-      street: '',
       number: '',
       complement: '',
       neighborhood: '',

@@ -1,7 +1,7 @@
 import { Bell, Search, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import useAuthStore from '@/stores/use-auth-store'
+import { useAuth } from '@/hooks/use-auth'
 import cardImage from '@/assets/whatsapp-image-2026-05-29-at-11.30.19-98680.jpeg'
 import {
   DropdownMenu,
@@ -12,7 +12,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export function Header() {
-  const { user, logout } = useAuthStore()
+  const { user, signOut } = useAuth()
+  const logout = signOut
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b bg-background px-4 md:px-6 shadow-sm">

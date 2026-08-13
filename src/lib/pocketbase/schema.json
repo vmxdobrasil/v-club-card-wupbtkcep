@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-24T02:15:16.942Z",
+  "generatedAt": "2026-08-13T18:41:10.624Z",
   "collections": [
     {
       "name": "users",
@@ -396,6 +396,49 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "billing_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["PIX", "BOLETO", "CREDIT_CARD", "UNDEFINED"]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "customer_cpf_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "customer_email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payment_link",
+          "type": "url",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -661,6 +704,54 @@
           "type": "text",
           "required": true,
           "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "asaas_config",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "api_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["sandbox", "production"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["active", "inactive", "testing", "error"]
         },
         {
           "name": "created",

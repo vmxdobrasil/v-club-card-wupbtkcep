@@ -17,6 +17,7 @@ import MasterCatalogDetailsPage from '@/pages/master/MasterCatalogDetailsPage'
 import MasterHoldersPage from '@/pages/master/MasterHoldersPage'
 import MasterLixeiraPage from '@/pages/master/MasterLixeiraPage'
 import MasterSecretsPage from '@/pages/master/MasterSecretsPage'
+import MasterAsaasPage from '@/pages/master/MasterAsaasPage'
 import CompanyDashboard from '@/pages/company/CompanyDashboard'
 import CompanyCatalogsPage from '@/pages/company/CompanyCatalogsPage'
 import CompanyCatalogDetailsPage from '@/pages/company/CompanyCatalogDetailsPage'
@@ -29,7 +30,7 @@ import PartnerCatalogsPage from '@/pages/partner/PartnerCatalogsPage'
 
 const App = () => (
   <AuthProvider>
-    <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+    <BrowserRouter>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/usuarios" element={<MasterHoldersPage />} />
             <Route path="/lixeira" element={<MasterLixeiraPage />} />
             <Route path="/master/secrets" element={<MasterSecretsPage />} />
+            <Route path="/master/asaas" element={<MasterAsaasPage />} />
             <Route path="/master" element={<MasterDashboard />} />
           </Route>
 
